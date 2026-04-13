@@ -130,6 +130,7 @@ function FolderDetailPage() {
 
   const editorRows = buildEditorRows(baselineDeck.cards, workingCards)
   const groupedRows = groupEditorRows(editorRows)
+  const resultCardTotal = editorRows.reduce((total, row) => total + row.currentQuantity, 0)
 
   function openImportModal() {
     setDraftDeck(baselineDeck.rawText)
@@ -316,13 +317,6 @@ function FolderDetailPage() {
 
         <section className="rounded-2xl border border-zinc-800 bg-zinc-950 shadow-[0_24px_60px_rgba(0,0,0,0.2)]">
           <EditorHeader
-            statusText={
-              baselineDeck.status === 'loading'
-                ? 'Validating deck...'
-                : mergeValidatedCards(workingCards).length > 0
-                  ? `${mergeValidatedCards(workingCards).length} cards in result`
-                  : 'No deck imported'
-            }
             onImport={openImportModal}
             onExport={exportResult}
             exportDisabled={mergeValidatedCards(workingCards).length === 0 || baselineDeck.status === 'loading'}
@@ -338,6 +332,7 @@ function FolderDetailPage() {
           <EditorDeckList
             groupedRows={groupedRows}
             emptyMessage="No cards in this deck yet."
+            resultCardTotal={resultCardTotal}
             onAdjustQuantity={adjustQuantity}
             onRemoveCard={removeCard}
             onRestoreCard={restoreCard}
@@ -523,13 +518,11 @@ function ToggleChip({
 }
 
 function EditorHeader({
-  statusText,
   onImport,
   onExport,
   exportDisabled,
   onAddCard,
 }: {
-  statusText: string
   onImport: () => void
   onExport: () => void
   exportDisabled: boolean
@@ -576,13 +569,41 @@ function EditorHeader({
 
   return (
     <div className="border-b border-zinc-800 p-5">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h2 className="text-lg font-semibold text-zinc-100">Deck Editor</h2>
-          <p className="mt-1 text-sm text-zinc-500">{statusText}</p>
+      <div className="flex items-center gap-3">
+        <div className="relative min-w-0 flex-1">
+          <input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Add card"
+            className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-2.5 text-sm text-zinc-100 outline-none transition placeholder:text-zinc-600 focus:border-cyan-500"
+          />
+
+          {query.trim().length >= 3 ? (
+            <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-20 overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950 shadow-2xl shadow-black/40">
+              {isSearching ? (
+                <div className="px-4 py-3 text-sm text-zinc-500">Searching cards...</div>
+              ) : results.length > 0 ? (
+                <div className="divide-y divide-zinc-800">
+                  {results.map((card) => (
+                    <button
+                      key={`${card.oracleId}-${card.name}`}
+                      type="button"
+                      onClick={() => handleSelectCard(card)}
+                      className="block w-full px-4 py-3 text-left transition hover:bg-zinc-900"
+                    >
+                      <div className="text-sm font-medium text-zinc-100">{card.name}</div>
+                      <div className="mt-1 text-xs text-zinc-500">{card.typeLine}</div>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="px-4 py-3 text-sm text-zinc-500">No cards found.</div>
+              )}
+            </div>
+          ) : null}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           <button
             type="button"
             onClick={onExport}
@@ -601,39 +622,6 @@ function EditorHeader({
             Import
           </button>
         </div>
-      </div>
-
-      <div className="relative mt-4">
-        <input
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="Add card"
-          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-2.5 text-sm text-zinc-100 outline-none transition placeholder:text-zinc-600 focus:border-cyan-500"
-        />
-
-        {query.trim().length >= 3 ? (
-          <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-20 overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950 shadow-2xl shadow-black/40">
-            {isSearching ? (
-              <div className="px-4 py-3 text-sm text-zinc-500">Searching cards...</div>
-            ) : results.length > 0 ? (
-              <div className="divide-y divide-zinc-800">
-                {results.map((card) => (
-                  <button
-                    key={`${card.oracleId}-${card.name}`}
-                    type="button"
-                    onClick={() => handleSelectCard(card)}
-                    className="block w-full px-4 py-3 text-left transition hover:bg-zinc-900"
-                  >
-                    <div className="text-sm font-medium text-zinc-100">{card.name}</div>
-                    <div className="mt-1 text-xs text-zinc-500">{card.typeLine}</div>
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <div className="px-4 py-3 text-sm text-zinc-500">No cards found.</div>
-            )}
-          </div>
-        ) : null}
       </div>
     </div>
   )
@@ -698,12 +686,14 @@ function DeckAlerts({
 function EditorDeckList({
   groupedRows,
   emptyMessage,
+  resultCardTotal,
   onAdjustQuantity,
   onRemoveCard,
   onRestoreCard,
 }: {
   groupedRows: Record<CardCategory, EditorRow[]>
   emptyMessage: string
+  resultCardTotal: number
   onAdjustQuantity: (row: EditorRow, delta: number) => void
   onRemoveCard: (row: EditorRow) => void
   onRestoreCard: (row: EditorRow) => void
@@ -737,8 +727,11 @@ function EditorDeckList({
   }
 
   return (
-    <div className="space-y-4 p-5">
-      <div className="flex justify-end">
+    <div className="space-y-4 px-5 pb-5 pt-1">
+      <div className="flex items-center justify-between">
+        <p className="font-mono text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">
+          {resultCardTotal} total card{resultCardTotal === 1 ? '' : 's'}
+        </p>
         <button
           type="button"
           onClick={() => setAllCategoriesCollapsed(!areAllCollapsed)}
@@ -750,6 +743,13 @@ function EditorDeckList({
 
       {categoriesWithRows.map((category) => (
         <section key={category} className="overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950/80">
+          {(() => {
+            const rows = groupedRows[category]
+            const addedCount = rows.filter((row) => row.status === 'added').length
+            const changedCount = rows.filter((row) => row.status === 'changed').length
+            const removedCount = rows.filter((row) => row.status === 'removed').length
+
+            return (
           <button
             type="button"
             onClick={() => toggleCategory(category)}
@@ -758,13 +758,22 @@ function EditorDeckList({
             <div>
               <h3 className="font-mono text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400">{category}</h3>
               <p className="mt-1 font-mono text-[11px] text-zinc-600">
-                {groupedRows[category].length} card{groupedRows[category].length === 1 ? '' : 's'}
+                {rows.length} card{rows.length === 1 ? '' : 's'}
               </p>
             </div>
-            <ChevronDown
-              className={`h-4 w-4 text-zinc-500 transition ${collapsedCategories[category] ? '-rotate-90' : 'rotate-0'}`}
-            />
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3 font-mono text-[11px] font-medium uppercase tracking-wide">
+                <span className="text-emerald-300">+{addedCount}</span>
+                <span className="text-amber-300">~{changedCount}</span>
+                <span className="text-rose-300">-{removedCount}</span>
+              </div>
+              <ChevronDown
+                className={`h-4 w-4 text-zinc-500 transition ${collapsedCategories[category] ? '-rotate-90' : 'rotate-0'}`}
+              />
+            </div>
           </button>
+            )
+          })()}
 
           {collapsedCategories[category] ? null : (
             <div className="divide-y divide-zinc-800">
