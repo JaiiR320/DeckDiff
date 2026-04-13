@@ -326,16 +326,15 @@ function FolderDetailPage() {
           <DeckAlerts
             deck={baselineDeck}
             onDismissWarnings={dismissWarnings}
-            emptyMessage="Import a baseline deck to start editing."
           />
 
           <EditorDeckList
             groupedRows={groupedRows}
-            emptyMessage="No cards in this deck yet."
+            emptyMessage="Import a deck or add cards to start building."
             resultCardTotal={resultCardTotal}
             onAdjustQuantity={adjustQuantity}
-             onRestoreCard={restoreCard}
-           />
+            onRestoreCard={restoreCard}
+          />
         </section>
       </main>
 
@@ -629,11 +628,9 @@ function EditorHeader({
 function DeckAlerts({
   deck,
   onDismissWarnings,
-  emptyMessage,
 }: {
   deck: DeckState
   onDismissWarnings: () => void
-  emptyMessage: string
 }) {
   return (
     <div className="space-y-4 px-5 pt-5">
@@ -673,11 +670,6 @@ function DeckAlerts({
         </div>
       ) : null}
 
-      {deck.status === 'idle' ? (
-        <div className="flex min-h-20 items-center justify-center rounded-xl border border-dashed border-zinc-800 bg-zinc-950/60 px-6 text-center">
-          <p className="max-w-sm text-sm text-zinc-500">{emptyMessage}</p>
-        </div>
-      ) : null}
     </div>
   )
 }
