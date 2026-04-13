@@ -4,10 +4,11 @@ import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import {
   CARD_CATEGORIES,
+  type CardCategory,
   type InvalidDeckCard,
   type ValidatedDeckCard,
   formatDeckExport,
-  groupValidatedCards,
+  mergeValidatedCards,
   parseDecklist,
 } from '../lib/decklist'
 import { formatFolderName, getFolderById } from '../lib/folders'
@@ -27,12 +28,62 @@ type DeckColumnState = {
   errorMessage: string | null
 }
 
+type DiffRow = {
+  oracleId: string
+  name: string
+  category: CardCategory
+  leftQuantity: number | null
+  rightQuantity: number | null
+  state: 'removed' | 'added' | 'changed' | 'same'
+}
+
 const emptyDeckState: DeckColumnState = {
   rawText: '',
   validCards: [],
   invalidCards: [],
   status: 'idle',
   errorMessage: null,
+}
+
+function buildDiffRows(leftCards: ValidatedDeckCard[], rightCards: ValidatedDeckCard[]) {
+  const leftMerged = mergeValidatedCards(leftCards)
+  const rightMerged = mergeValidatedCards(rightCards)
+  const leftByOracleId = new Map(leftMerged.map((card) => [card.oracleId, card]))
+  const rightByOracleId = new Map(rightMerged.map((card) => [card.oracleId, card]))
+  const allOracleIds = new Set([...leftByOracleId.keys(), ...rightByOracleId.keys()])
+  const rows: DiffRow[] = []
+
+  for (const oracleId of allOracleIds) {
+    const leftCard = leftByOracleId.get(oracleId)
+    const rightCard = rightByOracleId.get(oracleId)
+
+    rows.push({
+      oracleId,
+      name: leftCard?.name ?? rightCard?.name ?? 'Unknown Card',
+      category: leftCard?.category ?? rightCard?.category ?? 'Other',
+      leftQuantity: leftCard?.quantity ?? null,
+      rightQuantity: rightCard?.quantity ?? null,
+      state:
+        leftCard && rightCard
+          ? leftCard.quantity === rightCard.quantity
+            ? 'same'
+            : 'changed'
+          : leftCard
+            ? 'removed'
+            : 'added',
+    })
+  }
+
+  rows.sort((left, right) => {
+    const categoryCompare = CARD_CATEGORIES.indexOf(left.category) - CARD_CATEGORIES.indexOf(right.category)
+    if (categoryCompare !== 0) {
+      return categoryCompare
+    }
+
+    return left.name.localeCompare(right.name)
+  })
+
+  return rows
 }
 
 function FolderDetailPage() {
@@ -149,6 +200,8 @@ function FolderDetailPage() {
     }))
   }
 
+  const diffRows = buildDiffRows(leftDeck.validCards, rightDeck.validCards)
+
   return (
     <>
       <main className="mx-auto min-h-screen w-full max-w-7xl px-8 py-8">
@@ -186,18 +239,20 @@ function FolderDetailPage() {
             />
           </div>
 
-          <div className="grid min-h-[32rem] md:grid-cols-2">
-            <DeckColumnBody
+          <div className="grid gap-5 border-b border-zinc-800 p-5 md:grid-cols-2">
+            <DeckAlerts
               side="left"
               deck={leftDeck}
               onDismissWarnings={() => dismissWarnings('left')}
             />
-            <DeckColumnBody
+            <DeckAlerts
               side="right"
               deck={rightDeck}
               onDismissWarnings={() => dismissWarnings('right')}
             />
           </div>
+
+          <SplitDiffView leftDeck={leftDeck} rightDeck={rightDeck} diffRows={diffRows} />
         </section>
       </main>
 
@@ -386,7 +441,7 @@ function DeckColumnHeader({
   )
 }
 
-function DeckColumnBody({
+function DeckAlerts({
   side,
   deck,
   onDismissWarnings,
@@ -395,18 +450,8 @@ function DeckColumnBody({
   deck: DeckColumnState
   onDismissWarnings: () => void
 }) {
-  const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({})
-  const groupedDeck = groupValidatedCards(deck.validCards)
-
-  function toggleCategory(category: string) {
-    setCollapsedCategories((current) => ({
-      ...current,
-      [category]: !current[category],
-    }))
-  }
-
   return (
-    <div className="border-zinc-800 p-5 md:first:border-r">
+    <div>
       {deck.errorMessage ? (
         <div className="mb-4 rounded-xl border border-rose-900/60 bg-rose-950/40 p-4 text-sm text-rose-300">
           {deck.errorMessage}
@@ -438,48 +483,136 @@ function DeckColumnBody({
       ) : null}
 
       {deck.status === 'loading' ? (
-        <div className="flex h-full min-h-[26rem] items-center justify-center rounded-xl border border-dashed border-zinc-800 bg-zinc-950/60 px-6 text-center">
+        <div className="flex min-h-24 items-center justify-center rounded-xl border border-dashed border-zinc-800 bg-zinc-950/60 px-6 text-center">
           <p className="max-w-sm text-sm text-zinc-500">Validating the {side} deck with Scryfall.</p>
         </div>
-      ) : deck.validCards.length > 0 ? (
-        <div className="space-y-4">
-          {CARD_CATEGORIES.filter((category) => groupedDeck[category].length > 0).map((category) => (
-            <section key={category} className="rounded-xl border border-zinc-800 bg-zinc-950/60">
-              <button
-                type="button"
-                onClick={() => toggleCategory(category)}
-                className={`flex w-full items-center justify-between gap-3 px-4 py-3 text-left ${collapsedCategories[category] ? '' : 'border-b border-zinc-800'}`}
-              >
-                <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-zinc-400">
-                  {category}
-                </h3>
-                <ChevronDown
-                  className={`h-4 w-4 text-zinc-500 transition ${collapsedCategories[category] ? '-rotate-90' : 'rotate-0'}`}
-                />
-              </button>
-              {collapsedCategories[category] ? null : (
-                <div className="divide-y divide-zinc-800">
-                  {groupedDeck[category].map((card) => (
-                    <div
-                      key={card.oracleId}
-                      className="flex items-center justify-between gap-4 px-4 py-3 text-sm"
-                    >
-                      <span className="text-zinc-100">{card.name}</span>
-                      <span className="font-medium text-zinc-400">{card.quantity}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
-          ))}
-        </div>
       ) : (
-        <div className="flex h-full min-h-[26rem] items-center justify-center rounded-xl border border-dashed border-zinc-800 bg-zinc-950/60 px-6 text-center">
+        <div className="flex min-h-24 items-center justify-center rounded-xl border border-dashed border-zinc-800 bg-zinc-950/60 px-6 text-center">
           <p className="max-w-sm text-sm text-zinc-500">
             {deck.rawText
               ? `No valid cards were loaded into the ${side} deck.`
               : `Import a ${side} deck to start building the diff.`}
           </p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function SplitDiffView({
+  leftDeck,
+  rightDeck,
+  diffRows,
+}: {
+  leftDeck: DeckColumnState
+  rightDeck: DeckColumnState
+  diffRows: DiffRow[]
+}) {
+  const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({})
+
+  function toggleCategory(category: string) {
+    setCollapsedCategories((current) => ({
+      ...current,
+      [category]: !current[category],
+    }))
+  }
+
+  const categoriesWithCards = CARD_CATEGORIES.filter((category) =>
+    diffRows.some((row) => row.category === category),
+  )
+
+  const isReadyForDiff =
+    leftDeck.status !== 'loading' &&
+    rightDeck.status !== 'loading' &&
+    (leftDeck.validCards.length > 0 || rightDeck.validCards.length > 0)
+
+  return (
+    <div className="p-5">
+      {!isReadyForDiff ? (
+        <div className="flex min-h-[24rem] items-center justify-center rounded-xl border border-dashed border-zinc-800 bg-zinc-950/60 px-6 text-center">
+          <p className="max-w-sm text-sm text-zinc-500">
+            Import cards into the left and right decks to start comparing changes.
+          </p>
+        </div>
+      ) : categoriesWithCards.length === 0 ? (
+        <div className="flex min-h-[24rem] items-center justify-center rounded-xl border border-dashed border-zinc-800 bg-zinc-950/60 px-6 text-center">
+          <p className="max-w-sm text-sm text-zinc-500">
+            No cards available to compare between the master deck on the left and the compared deck on the right.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {categoriesWithCards.map((category) => {
+            const categoryRows = diffRows.filter((row) => row.category === category)
+            const changedCount = categoryRows.filter((row) => row.state !== 'same').length
+
+            return (
+              <section key={category} className="overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950/60">
+                <button
+                  type="button"
+                  onClick={() => toggleCategory(category)}
+                  className={`flex w-full items-center justify-between gap-3 px-4 py-3 text-left ${collapsedCategories[category] ? '' : 'border-b border-zinc-800'}`}
+                >
+                  <div>
+                    <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-zinc-400">
+                      {category}
+                    </h3>
+                    <p className="mt-1 text-xs text-zinc-600">
+                      {categoryRows.length} card{categoryRows.length === 1 ? '' : 's'}
+                      {changedCount > 0 ? `, ${changedCount} change${changedCount === 1 ? '' : 's'}` : ''}
+                    </p>
+                  </div>
+                  <ChevronDown
+                    className={`h-4 w-4 text-zinc-500 transition ${collapsedCategories[category] ? '-rotate-90' : 'rotate-0'}`}
+                  />
+                </button>
+
+                {collapsedCategories[category] ? null : (
+                  <div>
+                    <div className="grid grid-cols-2 border-b border-zinc-800 bg-zinc-950/80 text-xs font-medium uppercase tracking-[0.14em] text-zinc-500">
+                      <div className="border-r border-zinc-800 px-4 py-2">Master</div>
+                      <div className="px-4 py-2">Compared</div>
+                    </div>
+                    <div className="divide-y divide-zinc-800">
+                      {categoryRows.map((row) => (
+                        <div key={row.oracleId} className="grid grid-cols-2">
+                          <DiffCell side="left" row={row} />
+                          <DiffCell side="right" row={row} />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </section>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function DiffCell({ side, row }: { side: DeckSide; row: DiffRow }) {
+  const quantity = side === 'left' ? row.leftQuantity : row.rightQuantity
+  const isChanged = row.state === 'changed'
+  const isRemoved = row.state === 'removed' && side === 'left'
+  const isAdded = row.state === 'added' && side === 'right'
+  const colorClass = isChanged
+    ? 'bg-amber-950/30'
+    : isRemoved
+      ? 'bg-rose-950/30'
+      : isAdded
+        ? 'bg-emerald-950/30'
+        : 'bg-transparent'
+
+  return (
+    <div
+      className={`min-h-14 px-4 py-3 text-sm ${colorClass} ${side === 'left' ? 'border-r border-zinc-800' : ''}`}
+    >
+      {quantity === null ? null : (
+        <div className="flex items-center justify-between gap-4">
+          <span className="text-zinc-100">{row.name}</span>
+          <span className="font-medium text-zinc-400">{quantity}</span>
         </div>
       )}
     </div>
