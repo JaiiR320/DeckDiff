@@ -14,11 +14,11 @@ import {
   parseDecklist,
   type ValidatedDeckCard,
 } from '../lib/decklist'
-import { formatFolderName, getFolderById } from '../lib/folders'
+import { loadDeckById } from '../lib/storage'
 import { type SearchCardResult, validateDeckEntries } from '../lib/scryfall'
 
-export const Route = createFileRoute('/folders/$folderId')({
-  component: FolderDetailPage,
+export const Route = createFileRoute('/decks/$deckId')({
+  component: DeckDetailPage,
 })
 
 const emptyDeckState: DeckState = {
@@ -29,10 +29,10 @@ const emptyDeckState: DeckState = {
   errorMessage: null,
 }
 
-function FolderDetailPage() {
-  const { folderId } = Route.useParams()
-  const folder = getFolderById(folderId)
-  const folderName = folder?.name ?? formatFolderName(folderId)
+function DeckDetailPage() {
+  const { deckId } = Route.useParams()
+  const deck = loadDeckById(deckId)
+  const deckName = deck?.name ?? deckId
   const [baselineDeck, setBaselineDeck] = useState<DeckState>(emptyDeckState)
   const [workingCards, setWorkingCards] = useState<ValidatedDeckCard[]>([])
   const [isImportOpen, setIsImportOpen] = useState(false)
@@ -234,7 +234,7 @@ function FolderDetailPage() {
           >
             Back
           </Link>
-          <h1 className="text-3xl font-semibold tracking-tight text-zinc-100">{folderName}</h1>
+          <h1 className="text-3xl font-semibold tracking-tight text-zinc-100">{deckName}</h1>
         </div>
 
         <section className="rounded-2xl border border-zinc-800 bg-zinc-950 shadow-[0_24px_60px_rgba(0,0,0,0.2)]">

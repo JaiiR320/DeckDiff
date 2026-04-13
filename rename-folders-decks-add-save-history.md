@@ -160,8 +160,8 @@ Reuses `buildEditorRows(olderSave.cards, newerSave.cards)` + `groupEditorRows()`
 
 | Phase | Status | Notes |
 |-------|--------|-------|
-| Phase 1 — Data model + storage | 🔄 In Progress | Create `src/lib/deck.ts` + `src/lib/storage.ts` |
-| Phase 2 — Rename folder → deck | ⏳ Pending | Routing + home page updates |
+| Phase 1 — Data model + storage | ✅ Complete | `src/lib/deck.ts` + `src/lib/storage.ts` created |
+| Phase 2 — Rename folder → deck | ✅ Complete | Routing + home page + deck actions |
 | Phase 3 — Persistence (save/load) | ⏳ Pending | Save button + modal + hydration |
 | Phase 4 — Save history + diffing | ⏳ Pending | History tab + compare mode |
 
@@ -171,12 +171,71 @@ Reuses `buildEditorRows(olderSave.cards, newerSave.cards)` + `groupEditorRows()`
 
 **Key requirement**: `DeckItem.id` = slugified deck name (e.g., "My Deck" → `my-deck`)
 
-**Files to create**:
-- `src/lib/deck.ts` (new)
-- `src/lib/storage.ts` (new)
+**Files created**:
+- ✅ `src/lib/deck.ts` (new)
+- ✅ `src/lib/storage.ts` (new)
 
 **QA Checklist for Phase 1**:
-- [ ] `createDeck("My Commander Deck")` returns deck with id `my-commander-deck`
-- [ ] `createDeckSave(cards, label, count)` generates correct label
-- [ ] `loadDecks()` / `saveDecks()` roundtrip works
-- [ ] TypeScript compiles without errors
+- [x] `createDeck("My Commander Deck")` returns deck with id `my-commander-deck`
+- [x] `createDeckSave(cards, label, count)` generates correct label
+- [x] `loadDecks()` / `saveDecks()` roundtrip works
+- [x] TypeScript compiles without errors
+
+---
+
+### Phase 2 Details
+
+**Goal**: Rename "folder" → "deck" everywhere in the routing and home page. Update imports and regenerate route tree.
+
+**Files to rename/move**:
+1. ✅ `src/routes/folders.$folderId.tsx` → `src/routes/decks.$deckId.tsx` (updated route path + params)
+2. ✅ `src/components/folders/FolderCard.tsx` → `src/components/decks/DeckCard.tsx` (renamed + added edit menu)
+3. ✅ `src/components/folders/CreateFolderModal.tsx` → `src/components/decks/CreateDeckModal.tsx` (renamed labels)
+4. ✅ `src/components/folders/` → `src/components/decks/` (directory rename)
+5. ✅ **NEW** `src/components/decks/DeckActionsModal.tsx` — Edit, export, delete deck actions
+
+**Files to modify**:
+- ✅ `src/routes/index.tsx`: Uses `deck.ts`/`storage.ts`, deck terminology, persistence, deck actions
+- ✅ `src/routes/decks.$deckId.tsx`: Updated imports and variable names from folder to deck
+
+**Files to delete**:
+- ✅ `src/lib/folders.ts` — fully replaced by `deck.ts`
+
+**New Features Added**:
+- **Deck edit menu**: Three-dot menu on each deck card (visible on hover)
+- **Rename deck**: Change deck name (also updates the slug/URL)
+- **Export deck**: Downloads latest save as `.txt` file
+- **Delete deck**: With confirmation dialog showing save count
+
+**QA Checklist for Phase 2**:
+- [x] App builds without errors (`npm run build`)
+- [x] Route tree regenerates (`routeTree.gen.ts` updated with `decks.$deckId`)
+- [x] Home page loads and shows "New Deck" (not "New Folder")
+- [x] Can create a new deck from home page (persisted to localStorage)
+- [x] Clicking deck navigates to `/decks/$deckId`
+- [x] Old `/folders/` routes return 404
+- [x] Deck cards show edit menu on hover
+- [x] Can rename deck, export deck, delete deck
+- [x] No console errors
+
+---
+
+### Phase 3 Details
+
+**Goal**: Add save functionality to the deck editor. Allow users to save snapshots of their deck that persist to localStorage.
+
+**Files to modify**:
+- `src/routes/decks.$deckId.tsx`: Add save handler, load deck from storage on mount
+- `src/components/deck-editor/EditorHeader.tsx`: Add Save button (`onSave` + `saveDisabled` props)
+
+**Files to create**:
+- `src/components/deck-editor/modals/SaveDeckModal.tsx` — Optional label input before saving
+
+**QA Checklist for Phase 3**:
+- [ ] Deck page loads deck from localStorage on mount
+- [ ] Save button in header opens SaveDeckModal
+- [ ] Can save with default label "Save #N"
+- [ ] Can save with custom label
+- [ ] Save persists to localStorage
+- [ ] After save, deck shows updated save count on home page
+- [ ] Refresh preserves the saved cards

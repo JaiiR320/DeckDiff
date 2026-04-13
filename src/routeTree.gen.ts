@@ -10,43 +10,43 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as FoldersFolderIdRouteImport } from './routes/folders.$folderId'
+import { Route as DecksDeckIdRouteImport } from './routes/decks.$deckId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const FoldersFolderIdRoute = FoldersFolderIdRouteImport.update({
-  id: '/folders/$folderId',
-  path: '/folders/$folderId',
+const DecksDeckIdRoute = DecksDeckIdRouteImport.update({
+  id: '/decks/$deckId',
+  path: '/decks/$deckId',
   getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/folders/$folderId': typeof FoldersFolderIdRoute
+  '/decks/$deckId': typeof DecksDeckIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/folders/$folderId': typeof FoldersFolderIdRoute
+  '/decks/$deckId': typeof DecksDeckIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/folders/$folderId': typeof FoldersFolderIdRoute
+  '/decks/$deckId': typeof DecksDeckIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/folders/$folderId'
+  fullPaths: '/' | '/decks/$deckId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/folders/$folderId'
-  id: '__root__' | '/' | '/folders/$folderId'
+  to: '/' | '/decks/$deckId'
+  id: '__root__' | '/' | '/decks/$deckId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  FoldersFolderIdRoute: typeof FoldersFolderIdRoute
+  DecksDeckIdRoute: typeof DecksDeckIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -58,11 +58,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/folders/$folderId': {
-      id: '/folders/$folderId'
-      path: '/folders/$folderId'
-      fullPath: '/folders/$folderId'
-      preLoaderRoute: typeof FoldersFolderIdRouteImport
+    '/decks/$deckId': {
+      id: '/decks/$deckId'
+      path: '/decks/$deckId'
+      fullPath: '/decks/$deckId'
+      preLoaderRoute: typeof DecksDeckIdRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -70,7 +70,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  FoldersFolderIdRoute: FoldersFolderIdRoute,
+  DecksDeckIdRoute: DecksDeckIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
