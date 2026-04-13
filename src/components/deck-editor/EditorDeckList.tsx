@@ -108,10 +108,11 @@ export function EditorDeckList({
                         : row.status === 'changed'
                           ? 'bg-amber-950/20'
                           : ''
+                  const diffBorderClass = row.status === 'same' ? '' : 'shadow-[inset_3px_0_0_rgba(39,39,42,0.9)]'
                   return (
                     <div
                       key={row.oracleId}
-                      className={`grid grid-cols-[1fr_auto] items-center gap-3 px-4 py-3 text-sm ${index > 0 ? 'border-t border-zinc-800/90' : ''} ${toneClass}`}
+                      className={`grid grid-cols-[1fr_auto] items-center gap-3 px-4 py-3 text-sm ${index > 0 ? 'border-t border-zinc-800/90' : ''} ${toneClass} ${diffBorderClass}`}
                     >
                       <span className="text-zinc-100">{row.name}</span>
                       <div className="flex items-center gap-1.5">
