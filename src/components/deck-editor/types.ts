@@ -20,6 +20,4 @@ export type EditorRow = {
 
 export type ExportModalState = {
   includeQuantity: boolean
-  includeSet: boolean
-  includeCollectorNumber: boolean
 }

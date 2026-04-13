@@ -7,7 +7,7 @@ type ExportDeckModalProps = {
   exportPreview: string
   onClose: () => void
   onCopy: () => void
-  onExportOptionsChange: (updater: (current: ExportModalState) => ExportModalState) => void
+  onToggleIncludeQuantity: () => void
 }
 
 export function ExportDeckModal({
@@ -15,7 +15,7 @@ export function ExportDeckModal({
   exportPreview,
   onClose,
   onCopy,
-  onExportOptionsChange,
+  onToggleIncludeQuantity,
 }: ExportDeckModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-6">
@@ -41,38 +41,7 @@ export function ExportDeckModal({
             <ToggleChip
               label="Quantity"
               checked={exportOptions.includeQuantity}
-              onToggle={() =>
-                onExportOptionsChange((current) => ({
-                  ...current,
-                  includeQuantity: !current.includeQuantity,
-                }))
-              }
-            />
-            <ToggleChip
-              label="Set"
-              checked={exportOptions.includeSet || exportOptions.includeCollectorNumber}
-              onToggle={() =>
-                onExportOptionsChange((current) => {
-                  const nextIncludeSet = !current.includeSet
-
-                  return {
-                    ...current,
-                    includeSet: nextIncludeSet,
-                    includeCollectorNumber: nextIncludeSet ? current.includeCollectorNumber : false,
-                  }
-                })
-              }
-            />
-            <ToggleChip
-              label="Number"
-              checked={exportOptions.includeCollectorNumber}
-              onToggle={() =>
-                onExportOptionsChange((current) => ({
-                  ...current,
-                  includeSet: true,
-                  includeCollectorNumber: !current.includeCollectorNumber,
-                }))
-              }
+              onToggle={onToggleIncludeQuantity}
             />
           </div>
 

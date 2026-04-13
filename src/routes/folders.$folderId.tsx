@@ -40,8 +40,6 @@ function FolderDetailPage() {
   const [draftDeck, setDraftDeck] = useState('')
   const [exportOptions, setExportOptions] = useState<ExportModalState>({
     includeQuantity: true,
-    includeSet: false,
-    includeCollectorNumber: false,
   })
 
   const mergedWorkingCards = mergeValidatedCards(workingCards)
@@ -65,6 +63,13 @@ function FolderDetailPage() {
 
   function closeExportModal() {
     setIsExportOpen(false)
+  }
+
+  function toggleExportQuantity() {
+    setExportOptions((current) => ({
+      ...current,
+      includeQuantity: !current.includeQuantity,
+    }))
   }
 
   async function handleImportDeck(event: FormEvent<HTMLFormElement>) {
@@ -205,8 +210,8 @@ function FolderDetailPage() {
 
   const exportPreview = formatDecklist(mergedWorkingCards, {
     includeQuantity: exportOptions.includeQuantity,
-    includeSet: exportOptions.includeSet || exportOptions.includeCollectorNumber,
-    includeCollectorNumber: exportOptions.includeCollectorNumber,
+    includeSet: false,
+    includeCollectorNumber: false,
     setStyle: 'brackets',
   })
 
@@ -258,7 +263,7 @@ function FolderDetailPage() {
           exportPreview={exportPreview}
           onClose={closeExportModal}
           onCopy={() => void copyExportToClipboard()}
-          onExportOptionsChange={setExportOptions}
+          onToggleIncludeQuantity={toggleExportQuantity}
         />
       ) : null}
     </>

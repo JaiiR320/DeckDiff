@@ -19,12 +19,12 @@ export function EditorDeckList({
   onAdjustQuantity,
   onRestoreCard,
 }: EditorDeckListProps) {
-  const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({})
+  const [collapsedCategories, setCollapsedCategories] = useState<Partial<Record<CardCategory, boolean>>>({})
   const categoriesWithRows = CARD_CATEGORIES.filter((category) => groupedRows[category].length > 0)
   const areAllCollapsed =
     categoriesWithRows.length > 0 && categoriesWithRows.every((category) => collapsedCategories[category])
 
-  function toggleCategory(category: string) {
+  function toggleCategory(category: CardCategory) {
     setCollapsedCategories((current) => ({
       ...current,
       [category]: !current[category],
@@ -32,7 +32,11 @@ export function EditorDeckList({
   }
 
   function setAllCategoriesCollapsed(isCollapsed: boolean) {
-    setCollapsedCategories(Object.fromEntries(categoriesWithRows.map((category) => [category, isCollapsed])))
+    setCollapsedCategories(
+      Object.fromEntries(categoriesWithRows.map((category) => [category, isCollapsed])) as Partial<
+        Record<CardCategory, boolean>
+      >,
+    )
   }
 
   if (categoriesWithRows.length === 0) {
