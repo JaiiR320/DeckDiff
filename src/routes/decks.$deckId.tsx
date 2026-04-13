@@ -1,20 +1,25 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
+import { Pencil, Save } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
+import { DeckActionsModal } from '../components/decks/DeckActionsModal'
 import { DeckAlerts } from '../components/deck-editor/DeckAlerts'
 import { EditorDeckList } from '../components/deck-editor/EditorDeckList'
 import { EditorHeader } from '../components/deck-editor/EditorHeader'
 import { ExportDeckModal } from '../components/deck-editor/modals/ExportDeckModal'
 import { ImportDeckModal } from '../components/deck-editor/modals/ImportDeckModal'
+import { SaveDeckModal } from '../components/deck-editor/modals/SaveDeckModal'
 import { buildEditorRows, groupEditorRows } from '../components/deck-editor/editorRows'
 import type { DeckState, ExportModalState, EditorRow } from '../components/deck-editor/types'
 import {
   formatDecklist,
+  formatDeckExport,
   mergeValidatedCards,
   parseDecklist,
   type ValidatedDeckCard,
 } from '../lib/decklist'
-import { loadDeckById } from '../lib/storage'
+import { createDeckSave, getLatestSave, slugifyName, type DeckItem } from '../lib/deck'
+import { deleteDeck, loadDeckById, upsertDeck } from '../lib/storage'
 import { type SearchCardResult, validateDeckEntries } from '../lib/scryfall'
 
 export const Route = createFileRoute('/decks/$deckId')({
@@ -31,18 +36,20 @@ const emptyDeckState: DeckState = {
 
 function DeckDetailPage() {
   const { deckId } = Route.useParams()
-  const deck = loadDeckById(deckId)
-  const deckName = deck?.name ?? deckId
+  const [deck, setDeck] = useState<DeckItem | undefined>(loadDeckById(deckId))
   const [baselineDeck, setBaselineDeck] = useState<DeckState>(emptyDeckState)
   const [workingCards, setWorkingCards] = useState<ValidatedDeckCard[]>([])
   const [isImportOpen, setIsImportOpen] = useState(false)
   const [isExportOpen, setIsExportOpen] = useState(false)
+  const [isSaveOpen, setIsSaveOpen] = useState(false)
+  const [isDeckActionsOpen, setIsDeckActionsOpen] = useState(false)
   const [draftDeck, setDraftDeck] = useState('')
   const [isHydrated, setIsHydrated] = useState(false)
   const [exportOptions, setExportOptions] = useState<ExportModalState>({
     includeQuantity: true,
   })
 
+  const deckName = deck?.name ?? deckId
   const mergedWorkingCards = mergeValidatedCards(workingCards)
   const editorRows = buildEditorRows(baselineDeck.cards, workingCards)
   const groupedRows = groupEditorRows(editorRows)
@@ -52,9 +59,23 @@ function DeckDetailPage() {
       ? 'Validating the imported deck with Scryfall.'
       : 'Import a deck or add cards to start building.'
 
+  // Hydrate editor from latest save on mount
   useEffect(() => {
     setIsHydrated(true)
-  }, [])
+    if (deck && deck.saves.length > 0) {
+      const latestSave = getLatestSave(deck)
+      if (latestSave) {
+        setBaselineDeck({
+          rawText: '',
+          cards: latestSave.cards,
+          invalidCards: [],
+          status: 'ready',
+          errorMessage: null,
+        })
+        setWorkingCards(latestSave.cards)
+      }
+    }
+  }, [deck])
 
   function openImportModal() {
     setDraftDeck(baselineDeck.rawText)
@@ -74,11 +95,101 @@ function DeckDetailPage() {
     setIsExportOpen(false)
   }
 
+  function openSaveModal() {
+    setIsSaveOpen(true)
+  }
+
+  function closeSaveModal() {
+    setIsSaveOpen(false)
+  }
+
+  function openDeckActionsModal() {
+    setIsDeckActionsOpen(true)
+  }
+
+  function closeDeckActionsModal() {
+    setIsDeckActionsOpen(false)
+  }
+
   function toggleExportQuantity() {
     setExportOptions((current) => ({
       ...current,
       includeQuantity: !current.includeQuantity,
     }))
+  }
+
+  function handleSaveDeck(label: string) {
+    if (!deck) return
+
+    const newSave = createDeckSave(workingCards, label, deck.saves.length)
+    const updatedDeck: DeckItem = {
+      ...deck,
+      saves: [...deck.saves, newSave],
+      updatedAt: new Date().toISOString(),
+    }
+
+    upsertDeck(updatedDeck)
+    setDeck(updatedDeck)
+
+    // Update baseline to the newly saved state
+    setBaselineDeck({
+      rawText: '',
+      cards: workingCards,
+      invalidCards: [],
+      status: 'ready',
+      errorMessage: null,
+    })
+
+    closeSaveModal()
+  }
+
+  function handleRenameDeck(deckId: string, newName: string) {
+    if (!deck || deck.id !== deckId) return
+
+    const newId = slugifyName(newName)
+    const updatedDeck: DeckItem = {
+      ...deck,
+      id: newId,
+      name: newName,
+      updatedAt: new Date().toISOString(),
+    }
+
+    // Delete old deck and save new one
+    deleteDeck(deckId)
+    upsertDeck(updatedDeck)
+
+    setDeck(updatedDeck)
+    // Navigate to new URL if ID changed
+    if (newId !== deckId) {
+      window.history.replaceState(null, '', `/decks/${newId}`)
+    }
+    closeDeckActionsModal()
+  }
+
+  function handleDeleteDeck(deckId: string) {
+    deleteDeck(deckId)
+    // Navigate back to home
+    window.location.href = '/'
+  }
+
+  function handleExportDeck(deckToExport: DeckItem) {
+    const latestSave = getLatestSave(deckToExport)
+    if (!latestSave) {
+      alert('No cards to export. Import or add cards first.')
+      return
+    }
+
+    const exportText = formatDeckExport(latestSave.cards)
+    const blob = new Blob([exportText], { type: 'text/plain' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `${deckToExport.name.replace(/\s+/g, '-').toLowerCase()}.txt`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+    closeDeckActionsModal()
   }
 
   async function handleImportDeck(event: FormEvent<HTMLFormElement>) {
@@ -224,17 +335,47 @@ function DeckDetailPage() {
     setStyle: 'brackets',
   })
 
+  const defaultSaveLabel = deck ? `Save #${deck.saves.length + 1}` : 'Save #1'
+  const hasUnsavedChanges = workingCards.length > 0 && JSON.stringify(workingCards) !== JSON.stringify(baselineDeck.cards)
+
   return (
     <>
       <main className="mx-auto min-h-screen w-full max-w-5xl px-8 py-8">
-        <div className="mb-8 flex items-center gap-4">
-          <Link
-            to="/"
-            className="rounded-xl border border-zinc-800 px-3 py-2 text-sm text-zinc-400 transition hover:border-zinc-700 hover:text-zinc-200"
-          >
-            Back
-          </Link>
-          <h1 className="text-3xl font-semibold tracking-tight text-zinc-100">{deckName}</h1>
+        <div className="mb-8 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <Link
+              to="/"
+              className="rounded-xl border border-zinc-800 px-3 py-2 text-sm text-zinc-400 transition hover:border-zinc-700 hover:text-zinc-200"
+            >
+              Back
+            </Link>
+            <h1 className="text-3xl font-semibold tracking-tight text-zinc-100">{deckName}</h1>
+            {deck && deck.saves.length > 0 && (
+              <span className="rounded-lg bg-zinc-900 px-2 py-1 text-sm text-zinc-500">
+                {deck.saves.length} save{deck.saves.length === 1 ? '' : 's'}
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={openSaveModal}
+              disabled={!hasUnsavedChanges || workingCards.length === 0}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Save className="h-4 w-4" strokeWidth={1.75} />
+              Save
+            </button>
+            <button
+              type="button"
+              onClick={openDeckActionsModal}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-800 px-4 py-2 text-sm text-zinc-300 transition hover:border-zinc-700 hover:bg-zinc-900"
+            >
+              <Pencil className="h-4 w-4" strokeWidth={1.75} />
+              Edit
+            </button>
+          </div>
         </div>
 
         <section className="rounded-2xl border border-zinc-800 bg-zinc-950 shadow-[0_24px_60px_rgba(0,0,0,0.2)]">
@@ -273,6 +414,26 @@ function DeckDetailPage() {
           onClose={closeExportModal}
           onCopy={() => void copyExportToClipboard()}
           onToggleIncludeQuantity={toggleExportQuantity}
+        />
+      ) : null}
+
+      {isSaveOpen && deck ? (
+        <SaveDeckModal
+          defaultLabel={defaultSaveLabel}
+          isOpen={isSaveOpen}
+          onClose={closeSaveModal}
+          onSave={handleSaveDeck}
+        />
+      ) : null}
+
+      {isDeckActionsOpen && deck ? (
+        <DeckActionsModal
+          deck={deck}
+          isOpen={isDeckActionsOpen}
+          onClose={closeDeckActionsModal}
+          onRename={handleRenameDeck}
+          onDelete={handleDeleteDeck}
+          onExport={handleExportDeck}
         />
       ) : null}
     </>

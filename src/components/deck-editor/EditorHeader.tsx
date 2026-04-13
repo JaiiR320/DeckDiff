@@ -9,7 +9,12 @@ type EditorHeaderProps = {
   onAddCard: (card: SearchCardResult) => void
 }
 
-export function EditorHeader({ onImport, onExport, exportDisabled, onAddCard }: EditorHeaderProps) {
+export function EditorHeader({
+  onImport,
+  onExport,
+  exportDisabled,
+  onAddCard,
+}: EditorHeaderProps) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<SearchCardResult[]>([])
   const [isSearching, setIsSearching] = useState(false)

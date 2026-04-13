@@ -50,7 +50,7 @@ export function EditorDeckList({
   }
 
   return (
-    <div className="space-y-4 px-5 pb-5 pt-1">
+    <div className="space-y-4 px-5 pb-5 pt-5">
       <div className="flex items-center justify-between">
         <p className="font-mono text-sm font-medium uppercase tracking-[0.08em] text-zinc-500">
           {resultCardTotal} total card{resultCardTotal === 1 ? '' : 's'}

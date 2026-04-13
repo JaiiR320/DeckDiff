@@ -162,7 +162,7 @@ Reuses `buildEditorRows(olderSave.cards, newerSave.cards)` + `groupEditorRows()`
 |-------|--------|-------|
 | Phase 1 — Data model + storage | ✅ Complete | `src/lib/deck.ts` + `src/lib/storage.ts` created |
 | Phase 2 — Rename folder → deck | ✅ Complete | Routing + home page + deck actions |
-| Phase 3 — Persistence (save/load) | ⏳ Pending | Save button + modal + hydration |
+| Phase 3 — Persistence (save/load) | ✅ Complete | Save button + modal + hydration |
 | Phase 4 — Save history + diffing | ⏳ Pending | History tab + compare mode |
 
 ### Phase 1 Details

@@ -7,15 +7,22 @@ type DeckAlertsProps = {
 }
 
 export function DeckAlerts({ deck, onDismissWarnings }: DeckAlertsProps) {
+  const hasError = deck.errorMessage !== null
+  const hasWarnings = deck.invalidCards.length > 0
+
+  if (!hasError && !hasWarnings) {
+    return null
+  }
+
   return (
     <div className="space-y-4 px-5 pb-2 pt-5">
-      {deck.errorMessage ? (
+      {hasError ? (
         <div className="rounded-xl border border-rose-900/60 bg-rose-950/40 p-4 text-sm text-rose-300">
           {deck.errorMessage}
         </div>
       ) : null}
 
-      {deck.invalidCards.length > 0 ? (
+      {hasWarnings ? (
         <section className="rounded-xl border border-amber-900/60 bg-amber-950/20 p-4">
           <div className="flex items-start justify-between gap-4">
             <h3 className="text-sm font-semibold text-amber-200">Warnings</h3>
@@ -38,7 +45,6 @@ export function DeckAlerts({ deck, onDismissWarnings }: DeckAlertsProps) {
           </ul>
         </section>
       ) : null}
-
     </div>
   )
 }
