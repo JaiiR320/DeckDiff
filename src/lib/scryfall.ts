@@ -23,6 +23,11 @@ type ScryfallSearchResponse = {
   data: ScryfallCard[]
 }
 
+type ScryfallErrorResponse = {
+  object: 'error'
+  details: string
+}
+
 export type SearchCardResult = {
   oracleId: string
   name: string
@@ -33,6 +38,31 @@ export type SearchCardResult = {
 }
 
 const SCRYFALL_COLLECTION_LIMIT = 75
+
+function normalizeCardQuery(query: string) {
+  return query
+    .replace(/\s*\/\/\s*/g, ' // ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function getCollectionLookupName(name: string) {
+  const normalizedName = normalizeCardQuery(name)
+  return normalizedName.includes('//')
+    ? normalizedName.split('//')[0]?.trim() ?? normalizedName
+    : normalizedName
+}
+
+function toSearchCardResult(card: ScryfallCard): SearchCardResult {
+  return {
+    oracleId: card.oracle_id ?? card.id,
+    name: card.name,
+    typeLine: card.type_line,
+    category: getCardCategory(card.type_line),
+    setCode: card.set?.toUpperCase(),
+    collectorNumber: card.collector_number,
+  }
+}
 
 function chunkNames(names: string[], size: number) {
   const chunks: string[][] = []
@@ -72,7 +102,9 @@ async function fetchCardCollectionByEntries(entries: ParsedDeckEntry[]) {
     },
     body: JSON.stringify({
       identifiers: entries.map((entry) =>
-        entry.setCode ? { name: entry.name, set: entry.setCode.toLowerCase() } : { name: entry.name },
+        entry.setCode
+          ? { name: getCollectionLookupName(entry.name), set: entry.setCode.toLowerCase() }
+          : { name: getCollectionLookupName(entry.name) },
       ),
     }),
   })
@@ -85,29 +117,48 @@ async function fetchCardCollectionByEntries(entries: ParsedDeckEntry[]) {
 }
 
 export async function searchCards(query: string) {
+  const normalizedQuery = normalizeCardQuery(query)
+  const headers = { Accept: 'application/json' }
+
+  if (normalizedQuery.includes('//')) {
+    const namedResponse = await fetch(
+      `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(normalizedQuery)}`,
+      { headers },
+    )
+
+    if (namedResponse.ok) {
+      const card = (await namedResponse.json()) as ScryfallCard
+      return [toSearchCardResult(card)]
+    }
+
+    const namedError = (await namedResponse.json()) as ScryfallErrorResponse
+    if (namedError.object !== 'error') {
+      return [] as SearchCardResult[]
+    }
+  }
+
   const response = await fetch(
-    `https://api.scryfall.com/cards/search?unique=cards&order=name&q=${encodeURIComponent(query)}`,
-    {
-      headers: {
-        Accept: 'application/json',
-      },
-    },
+    `https://api.scryfall.com/cards/search?unique=cards&order=name&q=${encodeURIComponent(normalizedQuery)}`,
+    { headers },
   )
 
   if (!response.ok) {
-    return [] as SearchCardResult[]
+    const fallbackResponse = await fetch(
+      `https://api.scryfall.com/cards/search?unique=cards&order=name&q=${encodeURIComponent(`name:"${normalizedQuery}"`)}`,
+      { headers },
+    )
+
+    if (!fallbackResponse.ok) {
+      return [] as SearchCardResult[]
+    }
+
+    const fallbackPayload = (await fallbackResponse.json()) as ScryfallSearchResponse
+    return fallbackPayload.data.slice(0, 8).map(toSearchCardResult)
   }
 
   const payload = (await response.json()) as ScryfallSearchResponse
 
-  return payload.data.slice(0, 8).map((card) => ({
-    oracleId: card.oracle_id ?? card.id,
-    name: card.name,
-    typeLine: card.type_line,
-    category: getCardCategory(card.type_line),
-    setCode: card.set?.toUpperCase(),
-    collectorNumber: card.collector_number,
-  }))
+  return payload.data.slice(0, 8).map(toSearchCardResult)
 }
 
 export async function validateDeckEntries(entries: ParsedDeckEntry[]) {
@@ -121,7 +172,10 @@ export async function validateDeckEntries(entries: ParsedDeckEntry[]) {
   const payloads: ScryfallCollectionResponse[] = []
   const uniqueEntries = [
     ...new Map(
-      entries.map((entry) => [`${entry.name.toLowerCase()}::${entry.setCode ?? ''}`, entry]),
+      entries.map((entry) => [
+        `${getCollectionLookupName(entry.name).toLowerCase()}::${entry.setCode ?? ''}`,
+        entry,
+      ]),
     ).values(),
   ]
 
@@ -144,15 +198,17 @@ export async function validateDeckEntries(entries: ParsedDeckEntry[]) {
   const invalidCards: InvalidDeckCard[] = []
 
   for (const entry of entries) {
-    const exactMatch = cardByKey.get(`${entry.name.toLowerCase()}::${entry.setCode ?? ''}`)
+    const lookupName = getCollectionLookupName(entry.name)
+    const exactMatch = cardByKey.get(`${lookupName.toLowerCase()}::${entry.setCode ?? ''}`)
     const fallbackMatch = allCards.find(
       (card) =>
-        card.name.toLowerCase() === entry.name.toLowerCase() &&
+        (card.name.toLowerCase() === lookupName.toLowerCase() ||
+          card.name.toLowerCase() === normalizeCardQuery(entry.name).toLowerCase()) &&
         (!entry.setCode || card.set?.toUpperCase() === entry.setCode),
     )
     const matchedCard = exactMatch ?? fallbackMatch
 
-    if (!matchedCard || invalidNames.has(entry.name.toLowerCase())) {
+    if (!matchedCard || invalidNames.has(lookupName.toLowerCase())) {
       invalidCards.push({
         lineNumber: entry.lineNumber,
         quantity: entry.quantity,
