@@ -8,8 +8,9 @@ type EditorDeckListProps = {
   groupedRows: Record<CardCategory, EditorRow[]>
   emptyMessage: string
   resultCardTotal: number
-  onAdjustQuantity: (row: EditorRow, delta: number) => void
-  onRestoreCard: (row: EditorRow) => void
+  onAdjustQuantity?: (row: EditorRow, delta: number) => void
+  onRestoreCard?: (row: EditorRow) => void
+  readOnly?: boolean
 }
 
 export function EditorDeckList({
@@ -18,6 +19,7 @@ export function EditorDeckList({
   resultCardTotal,
   onAdjustQuantity,
   onRestoreCard,
+  readOnly = false,
 }: EditorDeckListProps) {
   const [collapsedCategories, setCollapsedCategories] = useState<Partial<Record<CardCategory, boolean>>>({})
   const categoriesWithRows = CARD_CATEGORIES.filter((category) => groupedRows[category].length > 0)
@@ -116,25 +118,31 @@ export function EditorDeckList({
                     >
                       <span className="text-zinc-100">{row.name}</span>
                       <div className="flex items-center gap-1.5">
-                        <QuantityStepper
-                          quantity={row.currentQuantity}
-                          baselineQuantity={row.baselineQuantity}
-                          tone={row.status}
-                          decrementLabel={`Decrease ${row.name} quantity`}
-                          incrementLabel={`Increase ${row.name} quantity`}
-                          onDecrement={() => onAdjustQuantity(row, -1)}
-                          onIncrement={() => onAdjustQuantity(row, 1)}
-                        />
-                        <button
-                          type="button"
-                          aria-label={`Restore ${row.name}`}
-                          title={`Restore ${row.name}`}
-                          onClick={() => onRestoreCard(row)}
-                          disabled={row.status === 'same'}
-                          className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-zinc-800 bg-zinc-900 text-zinc-300 transition hover:border-zinc-700 hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-40"
-                        >
-                          <RotateCcw className="h-3.5 w-3.5" />
-                        </button>
+                        {readOnly ? (
+                          <span className="font-mono text-sm text-zinc-400">{row.currentQuantity}</span>
+                        ) : (
+                          <>
+                            <QuantityStepper
+                              quantity={row.currentQuantity}
+                              baselineQuantity={row.baselineQuantity}
+                              tone={row.status}
+                              decrementLabel={`Decrease ${row.name} quantity`}
+                              incrementLabel={`Increase ${row.name} quantity`}
+                              onDecrement={() => onAdjustQuantity?.(row, -1)}
+                              onIncrement={() => onAdjustQuantity?.(row, 1)}
+                            />
+                            <button
+                              type="button"
+                              aria-label={`Restore ${row.name}`}
+                              title={`Restore ${row.name}`}
+                              onClick={() => onRestoreCard?.(row)}
+                              disabled={row.status === 'same'}
+                              className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-zinc-800 bg-zinc-900 text-zinc-300 transition hover:border-zinc-700 hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                              <RotateCcw className="h-3.5 w-3.5" />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </div>
                   )

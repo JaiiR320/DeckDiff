@@ -9,7 +9,9 @@ import { EditorHeader } from '../components/deck-editor/EditorHeader'
 import { ExportDeckModal } from '../components/deck-editor/modals/ExportDeckModal'
 import { ImportDeckModal } from '../components/deck-editor/modals/ImportDeckModal'
 import { SaveDeckModal } from '../components/deck-editor/modals/SaveDeckModal'
+import { SaveHistoryPanel } from '../components/deck-editor/SaveHistoryPanel'
 import { buildEditorRows, groupEditorRows } from '../components/deck-editor/editorRows'
+import type { DeckSave } from '../lib/deck'
 import type { DeckState, ExportModalState, EditorRow } from '../components/deck-editor/types'
 import {
   formatDecklist,
@@ -48,16 +50,26 @@ function DeckDetailPage() {
   const [exportOptions, setExportOptions] = useState<ExportModalState>({
     includeQuantity: true,
   })
+  const [activeTab, setActiveTab] = useState<'editor' | 'history'>('editor')
+  const [compareMode, setCompareMode] = useState(false)
+  const [compareSaves, setCompareSaves] = useState<{ saveA: DeckSave; saveB: DeckSave } | null>(null)
 
   const deckName = deck?.name ?? deckId
-  const mergedWorkingCards = mergeValidatedCards(workingCards)
-  const editorRows = buildEditorRows(baselineDeck.cards, workingCards)
+
+  // In compare mode, use the two saves being compared
+  const compareBaselineCards = compareSaves?.saveA.cards ?? baselineDeck.cards
+  const compareWorkingCards = compareSaves?.saveB.cards ?? workingCards
+
+  const mergedWorkingCards = mergeValidatedCards(compareWorkingCards)
+  const editorRows = buildEditorRows(compareBaselineCards, compareWorkingCards)
   const groupedRows = groupEditorRows(editorRows)
   const resultCardTotal = editorRows.reduce((total, row) => total + row.currentQuantity, 0)
   const emptyMessage =
     baselineDeck.status === 'loading'
       ? 'Validating the imported deck with Scryfall.'
-      : 'Import a deck or add cards to start building.'
+      : compareMode
+        ? `Comparing "${compareSaves?.saveA.label}" → "${compareSaves?.saveB.label}"`
+        : 'Import a deck or add cards to start building.'
 
   // Hydrate editor from latest save on mount
   useEffect(() => {
@@ -190,6 +202,48 @@ function DeckDetailPage() {
     document.body.removeChild(link)
     URL.revokeObjectURL(url)
     closeDeckActionsModal()
+  }
+
+  function handleLoadSave(save: DeckSave) {
+    setWorkingCards(save.cards)
+    setBaselineDeck({
+      rawText: '',
+      cards: save.cards,
+      invalidCards: [],
+      status: 'ready',
+      errorMessage: null,
+    })
+    setCompareMode(false)
+    setCompareSaves(null)
+    setActiveTab('editor')
+  }
+
+  function handleCompareSaves(saveA: DeckSave, saveB: DeckSave) {
+    // Ensure saveA is the older one
+    const olderSave = new Date(saveA.savedAt) <= new Date(saveB.savedAt) ? saveA : saveB
+    const newerSave = new Date(saveA.savedAt) <= new Date(saveB.savedAt) ? saveB : saveA
+    setCompareSaves({ saveA: olderSave, saveB: newerSave })
+    setCompareMode(true)
+    setActiveTab('editor')
+  }
+
+  function exitCompareMode() {
+    setCompareMode(false)
+    setCompareSaves(null)
+    // Reset to latest save if available
+    if (deck && deck.saves.length > 0) {
+      const latestSave = getLatestSave(deck)
+      if (latestSave) {
+        setWorkingCards(latestSave.cards)
+        setBaselineDeck({
+          rawText: '',
+          cards: latestSave.cards,
+          invalidCards: [],
+          status: 'ready',
+          errorMessage: null,
+        })
+      }
+    }
   }
 
   async function handleImportDeck(event: FormEvent<HTMLFormElement>) {
@@ -336,7 +390,11 @@ function DeckDetailPage() {
   })
 
   const defaultSaveLabel = deck ? `Save #${deck.saves.length + 1}` : 'Save #1'
-  const hasUnsavedChanges = workingCards.length > 0 && JSON.stringify(workingCards) !== JSON.stringify(baselineDeck.cards)
+  const hasCards = workingCards.length > 0
+  const cardsDifferFromBaseline = JSON.stringify(workingCards) !== JSON.stringify(baselineDeck.cards)
+  const hasNoSavesYet = !deck || deck.saves.length === 0
+  // Allow save if: has cards AND (differs from baseline OR no saves yet)
+  const canSave = hasCards && (cardsDifferFromBaseline || hasNoSavesYet)
 
   return (
     <>
@@ -360,41 +418,91 @@ function DeckDetailPage() {
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={openSaveModal}
-              disabled={!hasUnsavedChanges || workingCards.length === 0}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <Save className="h-4 w-4" strokeWidth={1.75} />
-              Save
-            </button>
-            <button
-              type="button"
               onClick={openDeckActionsModal}
               className="inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-800 px-4 py-2 text-sm text-zinc-300 transition hover:border-zinc-700 hover:bg-zinc-900"
             >
               <Pencil className="h-4 w-4" strokeWidth={1.75} />
               Edit
             </button>
+            <button
+              type="button"
+              onClick={openSaveModal}
+              disabled={!canSave}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Save className="h-4 w-4" strokeWidth={1.75} />
+              Save
+            </button>
           </div>
         </div>
 
         <section className="rounded-2xl border border-zinc-800 bg-zinc-950 shadow-[0_24px_60px_rgba(0,0,0,0.2)]">
-          <EditorHeader
-            onImport={openImportModal}
-            onExport={exportResult}
-            exportDisabled={isHydrated && (mergedWorkingCards.length === 0 || baselineDeck.status === 'loading')}
-            onAddCard={addCard}
-          />
+          {/* Tab switcher */}
+          <div className="flex border-b border-zinc-800">
+            <button
+              type="button"
+              onClick={() => setActiveTab('editor')}
+              className={`px-5 py-3 text-sm font-medium transition ${
+                activeTab === 'editor'
+                  ? 'border-b-2 border-cyan-400 text-cyan-400'
+                  : 'text-zinc-500 hover:text-zinc-300'
+              }`}
+            >
+              Editor
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('history')}
+              className={`px-5 py-3 text-sm font-medium transition ${
+                activeTab === 'history'
+                  ? 'border-b-2 border-cyan-400 text-cyan-400'
+                  : 'text-zinc-500 hover:text-zinc-300'
+              }`}
+            >
+              History
+            </button>
+            {compareMode && (
+              <div className="ml-auto flex items-center gap-2 px-4">
+                <span className="text-sm text-cyan-400">Comparing saves</span>
+                <button
+                  type="button"
+                  onClick={exitCompareMode}
+                  className="text-sm text-zinc-500 hover:text-zinc-300"
+                >
+                  Exit
+                </button>
+              </div>
+            )}
+          </div>
 
-          <DeckAlerts deck={baselineDeck} onDismissWarnings={dismissWarnings} />
+          {activeTab === 'editor' ? (
+            <>
+              <EditorHeader
+                onImport={openImportModal}
+                onExport={exportResult}
+                exportDisabled={isHydrated && (mergedWorkingCards.length === 0 || baselineDeck.status === 'loading')}
+                onAddCard={addCard}
+              />
 
-          <EditorDeckList
-            groupedRows={groupedRows}
-            emptyMessage={emptyMessage}
-            resultCardTotal={resultCardTotal}
-            onAdjustQuantity={adjustQuantity}
-            onRestoreCard={restoreCard}
-          />
+              <DeckAlerts deck={baselineDeck} onDismissWarnings={dismissWarnings} />
+
+              <EditorDeckList
+                groupedRows={groupedRows}
+                emptyMessage={emptyMessage}
+                resultCardTotal={resultCardTotal}
+                onAdjustQuantity={compareMode ? undefined : adjustQuantity}
+                onRestoreCard={compareMode ? undefined : restoreCard}
+                readOnly={compareMode}
+              />
+            </>
+          ) : deck ? (
+            <SaveHistoryPanel
+              deck={deck}
+              onLoadSave={handleLoadSave}
+              onCompareSaves={handleCompareSaves}
+              onBackToEditor={() => setActiveTab('editor')}
+            />
+          ) : null}
         </section>
       </main>
 

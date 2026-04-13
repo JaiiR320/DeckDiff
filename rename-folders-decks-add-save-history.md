@@ -163,79 +163,25 @@ Reuses `buildEditorRows(olderSave.cards, newerSave.cards)` + `groupEditorRows()`
 | Phase 1 — Data model + storage | ✅ Complete | `src/lib/deck.ts` + `src/lib/storage.ts` created |
 | Phase 2 — Rename folder → deck | ✅ Complete | Routing + home page + deck actions |
 | Phase 3 — Persistence (save/load) | ✅ Complete | Save button + modal + hydration |
-| Phase 4 — Save history + diffing | ⏳ Pending | History tab + compare mode |
-
-### Phase 1 Details
-
-**Goal**: Create `src/lib/deck.ts` with `DeckItem`/`DeckSave` types + helpers, and `src/lib/storage.ts` with localStorage functions. Verify compilation.
-
-**Key requirement**: `DeckItem.id` = slugified deck name (e.g., "My Deck" → `my-deck`)
-
-**Files created**:
-- ✅ `src/lib/deck.ts` (new)
-- ✅ `src/lib/storage.ts` (new)
-
-**QA Checklist for Phase 1**:
-- [x] `createDeck("My Commander Deck")` returns deck with id `my-commander-deck`
-- [x] `createDeckSave(cards, label, count)` generates correct label
-- [x] `loadDecks()` / `saveDecks()` roundtrip works
-- [x] TypeScript compiles without errors
+| Phase 4 — Save history + diffing | ✅ Complete | History tab + compare mode |
 
 ---
 
-### Phase 2 Details
+### Phase 4 Details
 
-**Goal**: Rename "folder" → "deck" everywhere in the routing and home page. Update imports and regenerate route tree.
-
-**Files to rename/move**:
-1. ✅ `src/routes/folders.$folderId.tsx` → `src/routes/decks.$deckId.tsx` (updated route path + params)
-2. ✅ `src/components/folders/FolderCard.tsx` → `src/components/decks/DeckCard.tsx` (renamed + added edit menu)
-3. ✅ `src/components/folders/CreateFolderModal.tsx` → `src/components/decks/CreateDeckModal.tsx` (renamed labels)
-4. ✅ `src/components/folders/` → `src/components/decks/` (directory rename)
-5. ✅ **NEW** `src/components/decks/DeckActionsModal.tsx` — Edit, export, delete deck actions
+**Goal**: Add History tab to view and compare deck saves. Allow loading old saves and diffing between saves.
 
 **Files to modify**:
-- ✅ `src/routes/index.tsx`: Uses `deck.ts`/`storage.ts`, deck terminology, persistence, deck actions
-- ✅ `src/routes/decks.$deckId.tsx`: Updated imports and variable names from folder to deck
-
-**Files to delete**:
-- ✅ `src/lib/folders.ts` — fully replaced by `deck.ts`
-
-**New Features Added**:
-- **Deck edit menu**: Three-dot menu on each deck card (visible on hover)
-- **Rename deck**: Change deck name (also updates the slug/URL)
-- **Export deck**: Downloads latest save as `.txt` file
-- **Delete deck**: With confirmation dialog showing save count
-
-**QA Checklist for Phase 2**:
-- [x] App builds without errors (`npm run build`)
-- [x] Route tree regenerates (`routeTree.gen.ts` updated with `decks.$deckId`)
-- [x] Home page loads and shows "New Deck" (not "New Folder")
-- [x] Can create a new deck from home page (persisted to localStorage)
-- [x] Clicking deck navigates to `/decks/$deckId`
-- [x] Old `/folders/` routes return 404
-- [x] Deck cards show edit menu on hover
-- [x] Can rename deck, export deck, delete deck
-- [x] No console errors
-
----
-
-### Phase 3 Details
-
-**Goal**: Add save functionality to the deck editor. Allow users to save snapshots of their deck that persist to localStorage.
-
-**Files to modify**:
-- `src/routes/decks.$deckId.tsx`: Add save handler, load deck from storage on mount
-- `src/components/deck-editor/EditorHeader.tsx`: Add Save button (`onSave` + `saveDisabled` props)
+- ✅ `src/routes/decks.$deckId.tsx`: Add Editor/History tab switcher, load handler, compare mode state
+- ✅ `src/components/deck-editor/EditorDeckList.tsx`: Add `readOnly` prop to hide quantity steppers/restore buttons
 
 **Files to create**:
-- `src/components/deck-editor/modals/SaveDeckModal.tsx` — Optional label input before saving
+- ✅ `src/components/deck-editor/SaveHistoryPanel.tsx` — List of saves with load/compare UI
 
-**QA Checklist for Phase 3**:
-- [ ] Deck page loads deck from localStorage on mount
-- [ ] Save button in header opens SaveDeckModal
-- [ ] Can save with default label "Save #N"
-- [ ] Can save with custom label
-- [ ] Save persists to localStorage
-- [ ] After save, deck shows updated save count on home page
-- [ ] Refresh preserves the saved cards
+**QA Checklist for Phase 4**:
+- [x] Tab switcher shows "Editor" and "History" tabs
+- [x] History tab lists all saves (newest first) with timestamps
+- [x] Clicking "Load" on a save switches to Editor tab with that save's cards
+- [x] Compare mode: select two saves, shows read-only diff
+- [x] Diff shows color-coded adds/removes/changes
+- [x] No regressions in editor functionality
