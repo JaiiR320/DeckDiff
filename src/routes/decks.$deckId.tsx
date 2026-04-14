@@ -132,7 +132,7 @@ function DeckDetailPage() {
   }, [previewLookup])
 
   function openImportModal() {
-    setDraftDeck(baselineDeck.rawText)
+    setDraftDeck(hasCards ? '' : baselineDeck.rawText)
     setIsImportOpen(true)
   }
 
@@ -291,12 +291,13 @@ function DeckDetailPage() {
   async function handleImportDeck(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
+    const isBulkAdd = workingCards.length > 0
     const rawText = draftDeck.trim()
     const { entries, errors } = parseDecklist(rawText)
 
     setBaselineDeck((currentDeck) => ({
       ...currentDeck,
-      rawText,
+      ...(isBulkAdd ? {} : { rawText }),
       status: 'loading',
       invalidCards: [],
       errorMessage: null,
@@ -315,24 +316,87 @@ function DeckDetailPage() {
         ...invalidCards,
       ]
 
+      if (isBulkAdd) {
+        setWorkingCards((currentCards) => mergeValidatedCards([...currentCards, ...validCards]))
+        setBaselineDeck((currentDeck) => ({
+          ...currentDeck,
+          invalidCards: warnings,
+          status: 'ready',
+          errorMessage: null,
+        }))
+      } else {
+        setBaselineDeck({
+          rawText,
+          cards: validCards,
+          invalidCards: warnings,
+          status: 'ready',
+          errorMessage: null,
+        })
+        setWorkingCards(validCards)
+      }
+    } catch (error) {
+      if (isBulkAdd) {
+        setBaselineDeck((currentDeck) => ({
+          ...currentDeck,
+          status: 'ready',
+          errorMessage:
+            error instanceof Error ? error.message : 'Could not add cards right now.',
+        }))
+      } else {
+        setBaselineDeck({
+          rawText,
+          cards: [],
+          invalidCards: [],
+          status: 'error',
+          errorMessage:
+            error instanceof Error ? error.message : 'Could not import this deck right now.',
+        })
+        setWorkingCards([])
+      }
+    }
+  }
+
+  async function handleOverrideDeck() {
+    const snapshotCards = workingCards
+    const rawText = draftDeck.trim()
+    const { entries, errors } = parseDecklist(rawText)
+
+    setBaselineDeck((currentDeck) => ({
+      ...currentDeck,
+      status: 'loading',
+      invalidCards: [],
+      errorMessage: null,
+    }))
+    closeImportModal()
+
+    try {
+      const { validCards, invalidCards } = await validateDeckEntries(entries)
+      const warnings = [
+        ...errors.map((error) => ({
+          lineNumber: error.lineNumber,
+          quantity: 0,
+          name: error.text,
+          reason: error.reason,
+        })),
+        ...invalidCards,
+      ]
+
+      // Old working cards become the baseline so the diff shows what changed
       setBaselineDeck({
-        rawText,
-        cards: validCards,
+        rawText: '',
+        cards: snapshotCards,
         invalidCards: warnings,
         status: 'ready',
         errorMessage: null,
       })
       setWorkingCards(validCards)
     } catch (error) {
-      setBaselineDeck({
-        rawText,
-        cards: [],
-        invalidCards: [],
-        status: 'error',
+      setBaselineDeck((currentDeck) => ({
+        ...currentDeck,
+        status: 'ready',
         errorMessage:
           error instanceof Error ? error.message : 'Could not import this deck right now.',
-      })
-      setWorkingCards([])
+      }))
     }
   }
 
@@ -612,10 +676,12 @@ function DeckDetailPage() {
 
       {isImportOpen ? (
         <ImportDeckModal
+          hasCards={hasCards}
           draftDeck={draftDeck}
           onDraftDeckChange={setDraftDeck}
           onClose={closeImportModal}
           onSubmit={handleImportDeck}
+          onOverride={handleOverrideDeck}
         />
       ) : null}
 
