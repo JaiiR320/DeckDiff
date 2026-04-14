@@ -1,4 +1,4 @@
-# DeckDiffer
+# DeckDiff
 
 Edit an MTG deck against an imported baseline and export the resulting list.
 
