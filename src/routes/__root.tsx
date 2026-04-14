@@ -4,6 +4,7 @@ import { TanStackDevtools } from "@tanstack/react-devtools";
 import { Analytics } from "@vercel/analytics/react";
 
 import appCss from "../styles.css?url";
+import { FeedbackButton } from "../components/FeedbackButton";
 
 export const Route = createRootRoute({
   head: () => ({
@@ -37,6 +38,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body className="font-sans antialiased [overflow-wrap:anywhere]">
         {children}
+        <FeedbackButton />
         <TanStackDevtools
           config={{
             position: "bottom-right",
