@@ -262,7 +262,11 @@ export const importLegacyDecksForUser = createServerFn({ method: 'POST' })
 
     const normalizedDecks = normalizeLegacyDecks(legacyDecks, new Set(existingDecks.map((deck) => deck.slug)))
 
-    if (normalizedDecks.length === 0) {
+    if (!normalizedDecks.ok) {
+      throw new Error(normalizedDecks.message)
+    }
+
+    if (normalizedDecks.decks.length === 0) {
       return {
         importedCount: 0,
         decks: await getDeckRowsWithSaves(userId),
@@ -271,7 +275,7 @@ export const importLegacyDecksForUser = createServerFn({ method: 'POST' })
 
     const importQueries = []
 
-    for (const legacyDeck of normalizedDecks) {
+    for (const legacyDeck of normalizedDecks.decks) {
       const deckDbId = crypto.randomUUID()
 
       importQueries.push(
@@ -301,7 +305,7 @@ export const importLegacyDecksForUser = createServerFn({ method: 'POST' })
     await db.batch(importQueries as [typeof importQueries[number], ...typeof importQueries])
 
     return {
-      importedCount: normalizedDecks.length,
+      importedCount: normalizedDecks.decks.length,
       decks: await getDeckRowsWithSaves(userId),
     }
   })

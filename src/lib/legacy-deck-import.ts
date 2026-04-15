@@ -32,6 +32,18 @@ export type LegacyDeckImport = {
   saves: LegacyDeckImportSave[]
 }
 
+type LegacyDeckImportSuccess = {
+  ok: true
+  decks: LegacyDeckImport[]
+}
+
+type LegacyDeckImportFailure = {
+  ok: false
+  message: string
+}
+
+export type LegacyDeckImportResult = LegacyDeckImportSuccess | LegacyDeckImportFailure
+
 export function parseImportDate(value: string | undefined, fallback: Date) {
   if (!value) {
     return fallback
@@ -62,12 +74,32 @@ export function resolveLegacyImportIdentity(name: string, existingSlugs: Set<str
   }
 }
 
-export function normalizeLegacyDecks(legacyDecks: unknown[], existingSlugs: Set<string>) {
+export function normalizeLegacyDecks(
+  legacyDecks: unknown[],
+  existingSlugs: Set<string>,
+): LegacyDeckImportResult {
+  if (!Array.isArray(legacyDecks)) {
+    return {
+      ok: false,
+      message: 'Local deck data is not in a valid format.',
+    }
+  }
+
   const normalizedDecks: LegacyDeckImport[] = []
 
-  for (const legacyDeck of legacyDecks) {
-    if (!isRecord(legacyDeck) || typeof legacyDeck.name !== 'string' || !legacyDeck.name.trim()) {
-      continue
+  for (const [deckIndex, legacyDeck] of legacyDecks.entries()) {
+    if (!isRecord(legacyDeck)) {
+      return {
+        ok: false,
+        message: `Local deck ${deckIndex + 1} is not a valid object.`,
+      }
+    }
+
+    if (typeof legacyDeck.name !== 'string' || !legacyDeck.name.trim()) {
+      return {
+        ok: false,
+        message: `Local deck ${deckIndex + 1} is missing a valid name.`,
+      }
     }
 
     const fallbackCreatedAt = new Date()
@@ -77,18 +109,39 @@ export function normalizeLegacyDecks(legacyDecks: unknown[], existingSlugs: Set<
     )
     const updatedAt = parseImportDate(typeof legacyDeck.updatedAt === 'string' ? legacyDeck.updatedAt : undefined, createdAt)
     const identity = resolveLegacyImportIdentity(legacyDeck.name, existingSlugs)
-    const rawSaves = Array.isArray(legacyDeck.saves) ? legacyDeck.saves : []
+
+    if (!Array.isArray(legacyDeck.saves)) {
+      return {
+        ok: false,
+        message: `Local deck "${legacyDeck.name}" has invalid save data.`,
+      }
+    }
+
+    const rawSaves = legacyDeck.saves
     const saves: LegacyDeckImportSave[] = []
 
-    for (const save of rawSaves) {
-      if (!isRecord(save) || !Array.isArray(save.cards)) {
-        continue
+    for (const [saveIndex, save] of rawSaves.entries()) {
+      if (!isRecord(save)) {
+        return {
+          ok: false,
+          message: `Save ${saveIndex + 1} in "${legacyDeck.name}" is invalid.`,
+        }
+      }
+
+      if (!Array.isArray(save.cards)) {
+        return {
+          ok: false,
+          message: `Save ${saveIndex + 1} in "${legacyDeck.name}" has invalid cards.`,
+        }
       }
 
       const cards = save.cards.filter(isValidatedDeckCard)
 
       if (cards.length !== save.cards.length) {
-        continue
+        return {
+          ok: false,
+          message: `Save ${saveIndex + 1} in "${legacyDeck.name}" contains invalid card data.`,
+        }
       }
 
       saves.push({
@@ -107,5 +160,8 @@ export function normalizeLegacyDecks(legacyDecks: unknown[], existingSlugs: Set<
     })
   }
 
-  return normalizedDecks
+  return {
+    ok: true,
+    decks: normalizedDecks,
+  }
 }

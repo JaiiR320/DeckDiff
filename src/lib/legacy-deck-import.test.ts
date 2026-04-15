@@ -46,14 +46,19 @@ describe('normalizeLegacyDecks', () => {
 
     const normalized = normalizeLegacyDecks(legacyDecks, new Set(['my-deck']))
 
-    expect(normalized).toHaveLength(1)
-    expect(normalized[0]?.name).toBe('My Deck (2)')
-    expect(normalized[0]?.slug).toBe('my-deck-2')
-    expect(normalized[0]?.saves).toHaveLength(1)
-    expect(normalized[0]?.saves[0]?.label).toBe('Save #1')
+    expect(normalized.ok).toBe(true)
+    if (!normalized.ok) {
+      throw new Error('Expected valid legacy deck normalization')
+    }
+
+    expect(normalized.decks).toHaveLength(1)
+    expect(normalized.decks[0]?.name).toBe('My Deck (2)')
+    expect(normalized.decks[0]?.slug).toBe('my-deck-2')
+    expect(normalized.decks[0]?.saves).toHaveLength(1)
+    expect(normalized.decks[0]?.saves[0]?.label).toBe('Save #1')
   })
 
-  it('skips malformed decks and malformed saves instead of importing them', () => {
+  it('aborts the entire import when malformed decks or saves are found', () => {
     const malformedLegacyDecks = [
       null,
       {
@@ -104,10 +109,11 @@ describe('normalizeLegacyDecks', () => {
 
     const normalized = normalizeLegacyDecks(malformedLegacyDecks, new Set())
 
-    expect(normalized).toHaveLength(1)
-    expect(normalized[0]?.name).toBe('Imported Deck')
-    expect(normalized[0]?.saves).toHaveLength(1)
-    expect(normalized[0]?.saves[0]?.label).toBe('Imported save')
-    expect(normalized[0]?.updatedAt.toISOString()).toBe('2024-02-01T00:00:00.000Z')
+    expect(normalized.ok).toBe(false)
+    if (normalized.ok) {
+      throw new Error('Expected malformed legacy decks to fail validation')
+    }
+
+    expect(normalized.message).toBe('Local deck 1 is not a valid object.')
   })
 })

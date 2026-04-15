@@ -61,6 +61,13 @@ function App() {
     setLegacyImportError(null)
   }
 
+  function handleDeleteLegacyDecks() {
+    clearLegacyDecks()
+    setLegacyDecks([])
+    setIsLegacyImportOpen(false)
+    setLegacyImportError(null)
+  }
+
   async function handleCreateDeck(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
@@ -223,6 +230,7 @@ function App() {
         errorMessage={legacyImportError}
         onClose={closeLegacyImportModal}
         onImport={() => void handleImportLegacyDecks()}
+        onDelete={handleDeleteLegacyDecks}
       />
     </>
   )
