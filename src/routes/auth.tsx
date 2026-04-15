@@ -1,4 +1,4 @@
-import { createFileRoute, redirect } from '@tanstack/react-router'
+import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
 import { LoaderCircle } from 'lucide-react'
 import { useState } from 'react'
 import type { FormEvent } from 'react'
@@ -18,6 +18,7 @@ export const Route = createFileRoute('/auth')({
 type Mode = 'sign-in' | 'sign-up'
 
 function AuthPage() {
+  const navigate = useNavigate()
   const [mode, setMode] = useState<Mode>('sign-up')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -57,7 +58,7 @@ function AuthPage() {
         }
       }
 
-      window.location.href = '/'
+      await navigate({ to: '/' })
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Authentication failed.'
       if (mode === 'sign-in' && message === 'Invalid email or password') {

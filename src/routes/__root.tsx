@@ -1,5 +1,5 @@
 import { LogOut } from 'lucide-react'
-import { HeadContent, Scripts, createRootRoute, useLocation } from '@tanstack/react-router'
+import { HeadContent, Scripts, createRootRoute, useLocation, useNavigate } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
 import { Analytics } from '@vercel/analytics/react'
@@ -61,11 +61,12 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 
 function AppHeader() {
   const location = useLocation()
+  const navigate = useNavigate()
   const { data: session, isPending } = authClient.useSession()
 
   async function handleSignOut() {
     await authClient.signOut()
-    window.location.href = '/auth'
+    await navigate({ to: '/auth' })
   }
 
   const isAuthPage = location.pathname === '/auth'
