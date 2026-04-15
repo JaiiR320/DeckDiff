@@ -25,49 +25,21 @@ export const Route = createFileRoute('/')({
       throw redirect({ to: '/auth' })
     }
   },
+  loader: async () => listDecks(),
   component: App,
 })
 
 function App() {
-  const [decks, setDecks] = useState<DeckItem[]>([])
+  const initialDecks = Route.useLoaderData()
+  const [decks, setDecks] = useState<DeckItem[]>(initialDecks)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [deckName, setDeckName] = useState('')
   const [editingDeck, setEditingDeck] = useState<DeckItem | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [legacyDecks, setLegacyDecks] = useState<unknown[]>([])
   const [isLegacyImportOpen, setIsLegacyImportOpen] = useState(false)
   const [isImportingLegacyDecks, setIsImportingLegacyDecks] = useState(false)
   const [legacyImportError, setLegacyImportError] = useState<string | null>(null)
-
-  async function reloadDecks() {
-    const nextDecks = await listDecks()
-    setDecks(nextDecks)
-    setErrorMessage(null)
-    return nextDecks
-  }
-
-  useEffect(() => {
-    let isCancelled = false
-
-    void reloadDecks()
-      .catch((error) => {
-        if (isCancelled) {
-          return
-        }
-
-        setErrorMessage(error instanceof Error ? error.message : 'Could not load decks right now.')
-      })
-      .finally(() => {
-        if (!isCancelled) {
-          setIsLoading(false)
-        }
-      })
-
-    return () => {
-      isCancelled = true
-    }
-  }, [])
 
   useEffect(() => {
     const nextLegacyDecks = loadDecks()
@@ -219,7 +191,7 @@ function App() {
           ))}
         </section>
 
-        {!isLoading && decks.length === 0 ? (
+        {decks.length === 0 ? (
           <p className="mt-8 text-sm text-zinc-500">No decks yet. Create one to get started.</p>
         ) : null}
       </main>
@@ -233,9 +205,9 @@ function App() {
         />
       ) : null}
 
-      {editingDeck ? (
-        <DeckActionsModal
-          deck={editingDeck}
+        {editingDeck ? (
+          <DeckActionsModal
+            deck={editingDeck}
           isOpen={true}
           onClose={closeEditModal}
           onRename={handleRenameDeck}

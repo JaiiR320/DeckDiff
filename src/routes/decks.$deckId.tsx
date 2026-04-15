@@ -39,6 +39,21 @@ export const Route = createFileRoute('/decks/$deckId')({
       throw redirect({ to: '/auth' })
     }
   },
+  loader: async ({ params }) => {
+    try {
+      return {
+        deck: await getDeck({
+          data: { deckId: params.deckId },
+        }),
+        errorMessage: null,
+      }
+    } catch (error) {
+      return {
+        deck: null,
+        errorMessage: error instanceof Error ? error.message : 'Could not load this deck right now.',
+      }
+    }
+  },
   component: DeckDetailPage,
 })
 
@@ -54,10 +69,10 @@ type ImportMode = 'replace-empty' | 'bulk-add' | 'override'
 
 function DeckDetailPage() {
   const { deckId } = Route.useParams()
+  const loaderData = Route.useLoaderData()
   const navigate = useNavigate()
-  const [deck, setDeck] = useState<DeckItem | undefined>()
-  const [deckLoadState, setDeckLoadState] = useState<'loading' | 'ready' | 'not-found' | 'error'>('loading')
-  const [deckErrorMessage, setDeckErrorMessage] = useState<string | null>(null)
+  const [deck, setDeck] = useState<DeckItem | undefined>(loaderData.deck ?? undefined)
+  const [deckErrorMessage, setDeckErrorMessage] = useState<string | null>(loaderData.errorMessage)
   const [baselineDeck, setBaselineDeck] = useState<DeckState>(emptyDeckState)
   const [workingCards, setWorkingCards] = useState<ValidatedDeckCard[]>([])
   const [isImportOpen, setIsImportOpen] = useState(false)
@@ -82,43 +97,9 @@ function DeckDetailPage() {
   const deckName = deck?.name ?? deckId
 
   useEffect(() => {
-    let isMounted = true
-
-    setDeckLoadState('loading')
-
-    void getDeck({
-      data: { deckId },
-    })
-      .then((nextDeck) => {
-        if (!isMounted) {
-          return
-        }
-
-        if (!nextDeck) {
-          setDeck(undefined)
-          setDeckLoadState('not-found')
-          setDeckErrorMessage(null)
-          return
-        }
-
-        setDeck(nextDeck)
-        setDeckLoadState('ready')
-        setDeckErrorMessage(null)
-      })
-      .catch((error) => {
-        if (!isMounted) {
-          return
-        }
-
-        setDeck(undefined)
-        setDeckLoadState('error')
-        setDeckErrorMessage(error instanceof Error ? error.message : 'Could not load this deck right now.')
-      })
-
-    return () => {
-      isMounted = false
-    }
-  }, [deckId])
+    setDeck(loaderData.deck ?? undefined)
+    setDeckErrorMessage(loaderData.errorMessage)
+  }, [loaderData.deck, loaderData.errorMessage])
 
   // In compare mode, use the two saves being compared
   const compareBaselineCards = compareSaves?.saveA.cards ?? baselineDeck.cards
@@ -595,25 +576,17 @@ function DeckDetailPage() {
   // Allow save if: has cards AND (differs from baseline OR no saves yet)
   const canSave = hasCards && (cardsDifferFromBaseline || hasNoSavesYet)
 
-  if (deckLoadState === 'loading') {
-    return (
-      <main className="mx-auto min-h-screen w-full max-w-6xl px-8 py-8">
-        <p className="text-sm text-zinc-500">Loading deck...</p>
-      </main>
-    )
-  }
-
-  if (deckLoadState === 'error') {
+  if (loaderData.errorMessage) {
     return (
       <main className="mx-auto min-h-screen w-full max-w-6xl px-8 py-8">
         <p className="rounded-xl border border-rose-900/40 bg-rose-950/30 px-4 py-3 text-sm text-rose-300">
-          {deckErrorMessage ?? 'Could not load this deck right now.'}
+          {loaderData.errorMessage}
         </p>
       </main>
     )
   }
 
-  if (deckLoadState === 'not-found' || !deck) {
+  if (!deck) {
     return (
       <main className="mx-auto min-h-screen w-full max-w-6xl px-8 py-8">
         <div className="flex items-center gap-4">
