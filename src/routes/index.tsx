@@ -1,6 +1,6 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import { Plus } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { DeckActionsModal } from '../components/decks/DeckActionsModal'
 import { CreateDeckModal } from '../components/decks/CreateDeckModal'
@@ -29,47 +29,43 @@ export const Route = createFileRoute('/')({
 })
 
 function App() {
-  const deckRequestIdRef = useRef(0)
   const [decks, setDecks] = useState<DeckItem[]>([])
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [deckName, setDeckName] = useState('')
   const [editingDeck, setEditingDeck] = useState<DeckItem | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
-  const [legacyDecks, setLegacyDecks] = useState<DeckItem[]>([])
+  const [legacyDecks, setLegacyDecks] = useState<unknown[]>([])
   const [isLegacyImportOpen, setIsLegacyImportOpen] = useState(false)
   const [isImportingLegacyDecks, setIsImportingLegacyDecks] = useState(false)
   const [legacyImportError, setLegacyImportError] = useState<string | null>(null)
 
+  async function reloadDecks() {
+    const nextDecks = await listDecks()
+    setDecks(nextDecks)
+    setErrorMessage(null)
+    return nextDecks
+  }
+
   useEffect(() => {
-    let isMounted = true
-    const requestId = deckRequestIdRef.current + 1
-    deckRequestIdRef.current = requestId
+    let isCancelled = false
 
-    void listDecks()
-      .then((nextDecks) => {
-        if (!isMounted || deckRequestIdRef.current !== requestId) {
-          return
-        }
-
-        setDecks(nextDecks)
-        setErrorMessage(null)
-      })
+    void reloadDecks()
       .catch((error) => {
-        if (!isMounted || deckRequestIdRef.current !== requestId) {
+        if (isCancelled) {
           return
         }
 
         setErrorMessage(error instanceof Error ? error.message : 'Could not load decks right now.')
       })
       .finally(() => {
-        if (isMounted) {
+        if (!isCancelled) {
           setIsLoading(false)
         }
       })
 
     return () => {
-      isMounted = false
+      isCancelled = true
     }
   }, [])
 
@@ -159,8 +155,6 @@ function App() {
     setLegacyImportError(null)
 
     try {
-      deckRequestIdRef.current += 1
-
       const result = await importLegacyDecksForUser({
         data: { decks: legacyDecks },
       })

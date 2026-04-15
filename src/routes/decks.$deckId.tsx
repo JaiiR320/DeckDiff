@@ -50,6 +50,8 @@ const emptyDeckState: DeckState = {
   errorMessage: null,
 }
 
+type ImportMode = 'replace-empty' | 'bulk-add' | 'override'
+
 function DeckDetailPage() {
   const { deckId } = Route.useParams()
   const navigate = useNavigate()
@@ -224,6 +226,97 @@ function DeckDetailPage() {
     }))
   }
 
+  async function validateDraftDeck(rawText: string) {
+    const { entries, errors } = parseDecklist(rawText)
+    const { validCards, invalidCards } = await validateDeckEntries(entries)
+
+    return {
+      validCards,
+      warnings: [
+        ...errors.map((error) => ({
+          lineNumber: error.lineNumber,
+          quantity: 0,
+          name: error.text,
+          reason: error.reason,
+        })),
+        ...invalidCards,
+      ],
+    }
+  }
+
+  async function importDraftDeck(mode: ImportMode) {
+    const snapshotCards = workingCards
+    const rawText = draftDeck.trim()
+
+    setBaselineDeck((currentDeck) => ({
+      ...currentDeck,
+      ...(mode === 'replace-empty' ? { rawText } : {}),
+      status: 'loading',
+      invalidCards: [],
+      errorMessage: null,
+    }))
+    closeImportModal()
+
+    try {
+      const { validCards, warnings } = await validateDraftDeck(rawText)
+
+      if (mode === 'bulk-add') {
+        setWorkingCards((currentCards) => mergeValidatedCards([...currentCards, ...validCards]))
+        setBaselineDeck((currentDeck) => ({
+          ...currentDeck,
+          invalidCards: warnings,
+          status: 'ready',
+          errorMessage: null,
+        }))
+        return
+      }
+
+      if (mode === 'override') {
+        setBaselineDeck({
+          rawText: '',
+          cards: snapshotCards,
+          invalidCards: warnings,
+          status: 'ready',
+          errorMessage: null,
+        })
+        setWorkingCards(validCards)
+        return
+      }
+
+      setBaselineDeck({
+        rawText,
+        cards: validCards,
+        invalidCards: warnings,
+        status: 'ready',
+        errorMessage: null,
+      })
+      setWorkingCards(validCards)
+    } catch (error) {
+      if (mode === 'replace-empty') {
+        setBaselineDeck({
+          rawText,
+          cards: [],
+          invalidCards: [],
+          status: 'error',
+          errorMessage: error instanceof Error ? error.message : 'Could not import this deck right now.',
+        })
+        setWorkingCards([])
+        return
+      }
+
+      setBaselineDeck((currentDeck) => ({
+        ...currentDeck,
+        status: 'ready',
+        errorMessage:
+          error instanceof Error
+            ? error.message
+            : mode === 'bulk-add'
+              ? 'Could not add cards right now.'
+              : 'Could not import this deck right now.',
+      }))
+    }
+  }
+
   async function handleSaveDeck(label: string) {
     if (!deck) return
 
@@ -361,113 +454,11 @@ function DeckDetailPage() {
   async function handleImportDeck(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
-    const isBulkAdd = workingCards.length > 0
-    const rawText = draftDeck.trim()
-    const { entries, errors } = parseDecklist(rawText)
-
-    setBaselineDeck((currentDeck) => ({
-      ...currentDeck,
-      ...(isBulkAdd ? {} : { rawText }),
-      status: 'loading',
-      invalidCards: [],
-      errorMessage: null,
-    }))
-    closeImportModal()
-
-    try {
-      const { validCards, invalidCards } = await validateDeckEntries(entries)
-      const warnings = [
-        ...errors.map((error) => ({
-          lineNumber: error.lineNumber,
-          quantity: 0,
-          name: error.text,
-          reason: error.reason,
-        })),
-        ...invalidCards,
-      ]
-
-      if (isBulkAdd) {
-        setWorkingCards((currentCards) => mergeValidatedCards([...currentCards, ...validCards]))
-        setBaselineDeck((currentDeck) => ({
-          ...currentDeck,
-          invalidCards: warnings,
-          status: 'ready',
-          errorMessage: null,
-        }))
-      } else {
-        setBaselineDeck({
-          rawText,
-          cards: validCards,
-          invalidCards: warnings,
-          status: 'ready',
-          errorMessage: null,
-        })
-        setWorkingCards(validCards)
-      }
-    } catch (error) {
-      if (isBulkAdd) {
-        setBaselineDeck((currentDeck) => ({
-          ...currentDeck,
-          status: 'ready',
-          errorMessage:
-            error instanceof Error ? error.message : 'Could not add cards right now.',
-        }))
-      } else {
-        setBaselineDeck({
-          rawText,
-          cards: [],
-          invalidCards: [],
-          status: 'error',
-          errorMessage:
-            error instanceof Error ? error.message : 'Could not import this deck right now.',
-        })
-        setWorkingCards([])
-      }
-    }
+    await importDraftDeck(workingCards.length > 0 ? 'bulk-add' : 'replace-empty')
   }
 
   async function handleOverrideDeck() {
-    const snapshotCards = workingCards
-    const rawText = draftDeck.trim()
-    const { entries, errors } = parseDecklist(rawText)
-
-    setBaselineDeck((currentDeck) => ({
-      ...currentDeck,
-      status: 'loading',
-      invalidCards: [],
-      errorMessage: null,
-    }))
-    closeImportModal()
-
-    try {
-      const { validCards, invalidCards } = await validateDeckEntries(entries)
-      const warnings = [
-        ...errors.map((error) => ({
-          lineNumber: error.lineNumber,
-          quantity: 0,
-          name: error.text,
-          reason: error.reason,
-        })),
-        ...invalidCards,
-      ]
-
-      // Old working cards become the baseline so the diff shows what changed
-      setBaselineDeck({
-        rawText: '',
-        cards: snapshotCards,
-        invalidCards: warnings,
-        status: 'ready',
-        errorMessage: null,
-      })
-      setWorkingCards(validCards)
-    } catch (error) {
-      setBaselineDeck((currentDeck) => ({
-        ...currentDeck,
-        status: 'ready',
-        errorMessage:
-          error instanceof Error ? error.message : 'Could not import this deck right now.',
-      }))
-    }
+    await importDraftDeck('override')
   }
 
   function dismissWarnings() {

@@ -1,4 +1,4 @@
-import { ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import { useState } from 'react'
 import type { DeckItem, DeckSave } from '../../lib/deck'
 
@@ -125,7 +125,7 @@ export function SaveHistoryPanel({ deck, onLoadSave, onCompareSaves, onBackToEdi
 
       {/* Saves list */}
       <div className="space-y-2">
-        {saves.map((save, index) => {
+        {saves.map((save) => {
           const isSelected = selectedSaves.includes(save.id)
           const selectionOrder = selectedSaves.indexOf(save.id) + 1
 

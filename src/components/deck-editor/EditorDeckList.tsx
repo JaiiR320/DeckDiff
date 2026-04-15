@@ -42,7 +42,6 @@ export function EditorDeckList({
   const totalAdded = allRows.filter((row) => row.status === 'added').length
   const totalChanged = allRows.filter((row) => row.status === 'changed').length
   const totalRemoved = allRows.filter((row) => row.status === 'removed').length
-  const hasDiffRows = totalAdded + totalChanged + totalRemoved > 0
 
   function toggleCategory(category: CardCategory) {
     setCollapsedCategories((current) => ({

@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import { normalizeLegacyDecks, resolveLegacyImportIdentity } from './legacy-deck-import'
-import type { DeckItem } from './deck'
 
 describe('resolveLegacyImportIdentity', () => {
   it('creates suffixed copies instead of reusing an existing slug', () => {
@@ -18,7 +17,7 @@ describe('resolveLegacyImportIdentity', () => {
 
 describe('normalizeLegacyDecks', () => {
   it('preserves valid decks while suffixing colliding imports', () => {
-    const legacyDecks: DeckItem[] = [
+    const legacyDecks = [
       {
         id: 'my-deck',
         name: 'My Deck',
@@ -29,7 +28,17 @@ describe('normalizeLegacyDecks', () => {
             id: 'save-1',
             label: 'Save #1',
             savedAt: '2024-01-02T00:00:00.000Z',
-            cards: [],
+            cards: [
+              {
+                oracleId: 'card-1',
+                name: 'Sol Ring',
+                quantity: 1,
+                typeLine: 'Artifact',
+                category: 'Artifact',
+                setCode: 'CMM',
+                collectorNumber: '398',
+              },
+            ],
           },
         ],
       },
@@ -71,11 +80,27 @@ describe('normalizeLegacyDecks', () => {
             id: 'good-save',
             label: '  ',
             savedAt: 'bad-date',
-            cards: [],
+            cards: [
+              {
+                oracleId: 'good-card',
+                name: 'Island',
+                quantity: 2,
+                typeLine: 'Basic Land - Island',
+                category: 'Land',
+                setCode: 'M21',
+                collectorNumber: '310',
+              },
+            ],
+          },
+          {
+            id: 'invalid-card-save',
+            label: 'Invalid cards',
+            savedAt: '2024-02-02T00:00:00.000Z',
+            cards: [{ name: 'Broken card' }],
           },
         ],
       },
-    ] as DeckItem[]
+    ]
 
     const normalized = normalizeLegacyDecks(malformedLegacyDecks, new Set())
 

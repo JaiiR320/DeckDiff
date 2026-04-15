@@ -30,38 +30,6 @@ export function slugifyName(name: string): string {
 }
 
 /**
- * Creates a new DeckItem with a slugified ID and empty saves array.
- */
-export function createDeck(name: string): DeckItem {
-  const now = new Date().toISOString()
-  return {
-    id: slugifyName(name),
-    name: name.trim(),
-    createdAt: now,
-    updatedAt: now,
-    saves: [],
-  }
-}
-
-/**
- * Creates a new DeckSave with the given cards and optional label.
- * If no label is provided, generates "Save #N" based on saveCount.
- */
-export function createDeckSave(
-  cards: ValidatedDeckCard[],
-  label?: string,
-  saveCount?: number,
-): DeckSave {
-  const finalLabel = label?.trim() || `Save #${(saveCount ?? 0) + 1}`
-  return {
-    id: crypto.randomUUID(),
-    savedAt: new Date().toISOString(),
-    label: finalLabel,
-    cards: [...cards], // Shallow copy to prevent accidental mutation
-  }
-}
-
-/**
  * Returns the most recent save for a deck, or null if no saves exist.
  */
 export function getLatestSave(deck: DeckItem): DeckSave | null {
@@ -69,14 +37,4 @@ export function getLatestSave(deck: DeckItem): DeckSave | null {
     return null
   }
   return deck.saves[deck.saves.length - 1]
-}
-
-/**
- * Updates a deck's updatedAt timestamp and returns the modified deck.
- */
-export function touchDeck(deck: DeckItem): DeckItem {
-  return {
-    ...deck,
-    updatedAt: new Date().toISOString(),
-  }
 }

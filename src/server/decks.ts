@@ -4,9 +4,9 @@ import { getRequestHeaders } from '@tanstack/react-start/server'
 import { db } from '#/db'
 import { deckSaves, decks } from '#/db/schema'
 import { auth } from '#/lib/auth'
-import { slugifyName, type DeckItem, type DeckSave } from '#/lib/deck'
+import type { DeckItem, DeckSave } from '#/lib/deck'
 import type { ValidatedDeckCard } from '#/lib/decklist'
-import { normalizeLegacyDecks, parseImportDate, resolveLegacyImportIdentity } from '#/lib/legacy-deck-import'
+import { normalizeLegacyDecks, resolveLegacyImportIdentity } from '#/lib/legacy-deck-import'
 
 type CreateDeckInput = {
   name: string
@@ -32,7 +32,7 @@ type GetDeckInput = {
 }
 
 type ImportLegacyDecksInput = {
-  decks: DeckItem[]
+  decks: unknown[]
 }
 
 type DeckRow = typeof decks.$inferSelect

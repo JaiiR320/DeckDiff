@@ -1,5 +1,22 @@
-import { slugifyName, type DeckItem } from './deck'
+import { slugifyName } from './deck'
 import type { ValidatedDeckCard } from './decklist'
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
+function isValidatedDeckCard(value: unknown): value is ValidatedDeckCard {
+  return (
+    isRecord(value) &&
+    typeof value.oracleId === 'string' &&
+    typeof value.name === 'string' &&
+    typeof value.quantity === 'number' &&
+    typeof value.typeLine === 'string' &&
+    typeof value.category === 'string' &&
+    typeof value.setCode === 'string' &&
+    typeof value.collectorNumber === 'string'
+  )
+}
 
 export type LegacyDeckImportSave = {
   label: string
@@ -45,30 +62,39 @@ export function resolveLegacyImportIdentity(name: string, existingSlugs: Set<str
   }
 }
 
-export function normalizeLegacyDecks(legacyDecks: DeckItem[], existingSlugs: Set<string>) {
+export function normalizeLegacyDecks(legacyDecks: unknown[], existingSlugs: Set<string>) {
   const normalizedDecks: LegacyDeckImport[] = []
 
   for (const legacyDeck of legacyDecks) {
-    if (!legacyDeck || typeof legacyDeck.name !== 'string' || !legacyDeck.name.trim()) {
+    if (!isRecord(legacyDeck) || typeof legacyDeck.name !== 'string' || !legacyDeck.name.trim()) {
       continue
     }
 
     const fallbackCreatedAt = new Date()
-    const createdAt = parseImportDate(legacyDeck.createdAt, fallbackCreatedAt)
-    const updatedAt = parseImportDate(legacyDeck.updatedAt, createdAt)
+    const createdAt = parseImportDate(
+      typeof legacyDeck.createdAt === 'string' ? legacyDeck.createdAt : undefined,
+      fallbackCreatedAt,
+    )
+    const updatedAt = parseImportDate(typeof legacyDeck.updatedAt === 'string' ? legacyDeck.updatedAt : undefined, createdAt)
     const identity = resolveLegacyImportIdentity(legacyDeck.name, existingSlugs)
     const rawSaves = Array.isArray(legacyDeck.saves) ? legacyDeck.saves : []
     const saves: LegacyDeckImportSave[] = []
 
     for (const save of rawSaves) {
-      if (!save || !Array.isArray(save.cards)) {
+      if (!isRecord(save) || !Array.isArray(save.cards)) {
+        continue
+      }
+
+      const cards = save.cards.filter(isValidatedDeckCard)
+
+      if (cards.length !== save.cards.length) {
         continue
       }
 
       saves.push({
         label: typeof save.label === 'string' && save.label.trim() ? save.label.trim() : 'Imported save',
-        savedAt: parseImportDate(save.savedAt, updatedAt),
-        cards: save.cards,
+        savedAt: parseImportDate(typeof save.savedAt === 'string' ? save.savedAt : undefined, updatedAt),
+        cards,
       })
     }
 
