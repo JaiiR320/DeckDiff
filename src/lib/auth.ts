@@ -23,8 +23,36 @@ if (!process.env.BETTER_AUTH_URL) {
 
 const authBaseURL = process.env.BETTER_AUTH_URL
 
+function toOrigin(url: string) {
+  try {
+    return new URL(url).origin
+  } catch {
+    return null
+  }
+}
+
+function getVercelOrigin(value: string | undefined) {
+  if (!value) {
+    return null
+  }
+
+  return toOrigin(value.startsWith('http') ? value : `https://${value}`)
+}
+
+const trustedOrigins = [
+  toOrigin(authBaseURL),
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+  getVercelOrigin(process.env.VERCEL_URL),
+  getVercelOrigin(process.env.VERCEL_BRANCH_URL),
+  getVercelOrigin(process.env.VERCEL_PROJECT_PRODUCTION_URL),
+  '*.vercel.app',
+  ...(process.env.BETTER_AUTH_TRUSTED_ORIGINS?.split(',').map((origin) => origin.trim()) ?? []),
+].filter((origin): origin is string => Boolean(origin))
+
 export const auth = betterAuth({
   baseURL: authBaseURL,
+  trustedOrigins,
   secret: authSecret,
   database: drizzleAdapter(db, {
     provider: 'pg',
