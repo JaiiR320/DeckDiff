@@ -36,6 +36,79 @@ type ScryfallSearchResponse = {
   data: ScryfallCard[]
 }
 
+type ScryfallAutocompleteResponse = {
+  data: string[]
+}
+
+export type ScryfallRuling = {
+  object: 'ruling'
+  oracle_id: string
+  source: 'wotc' | 'scryfall'
+  published_at: string
+  comment: string
+}
+
+type ScryfallListResponse<T> = {
+  object: 'list'
+  has_more: boolean
+  next_page?: string | null
+  warnings?: string[] | null
+  data: T[]
+}
+
+export type ScryfallJudgeCard = Record<string, unknown> & {
+  object?: unknown
+  id?: unknown
+  name: string
+  layout?: unknown
+  mana_cost?: unknown
+  cmc?: unknown
+  type_line?: unknown
+  oracle_text?: unknown
+  colors?: unknown
+  card_faces?: unknown
+  color_identity?: unknown
+  keywords?: unknown
+  legalities?: unknown
+  rulings_uri?: string
+}
+
+type JudgeCardFace = {
+  object: string | null
+  name: string | null
+  mana_cost: string | null
+  type_line: string | null
+  oracle_text: string | null
+  colors: string[] | null
+  color_indicator: string[] | null
+  power: string | null
+  toughness: string | null
+  loyalty: string | null
+  defense: string | null
+}
+
+export type JudgeCardContext = {
+  object: string | null
+  id: string | null
+  name: string
+  layout: string | null
+  mana_cost: string | null
+  cmc: number | null
+  type_line: string | null
+  oracle_text: string | null
+  colors: string[] | null
+  card_faces: JudgeCardFace[] | null
+  color_identity: string[] | null
+  keywords: string[] | null
+  legalities: Record<string, string> | null
+  rulings: ScryfallRuling[]
+}
+
+export type UnresolvedJudgeCardReference = {
+  name: string
+  suggestions: string[]
+}
+
 type ScryfallSymbol = {
   symbol: string
   english: string
@@ -92,6 +165,68 @@ function normalizeCardQuery(query: string) {
     .replace(/\s*\/\/\s*/g, ' // ')
     .replace(/\s+/g, ' ')
     .trim()
+}
+
+export function parseReferencedCardNames(message: string) {
+  const matches = message.matchAll(/\[\[([^\]]+)\]\]/g)
+
+  return [...new Set(
+    Array.from(matches, (match) => normalizeCardQuery(match[1] ?? '')).filter(Boolean),
+  )]
+}
+
+export function stripCardReferenceMarkup(message: string) {
+  return message.replace(/\[\[([^\]]+)\]\]/g, (_, cardName: string) => normalizeCardQuery(cardName)).trim()
+}
+
+function toJudgeCardContext(card: ScryfallJudgeCard, rulings: ScryfallRuling[]): JudgeCardContext {
+  const cardFaces = Array.isArray(card.card_faces)
+    ? card.card_faces
+        .filter((face): face is Record<string, unknown> => !!face && typeof face === 'object')
+        .map((face) => ({
+          object: typeof face.object === 'string' ? face.object : null,
+          name: typeof face.name === 'string' ? face.name : null,
+          mana_cost: typeof face.mana_cost === 'string' ? face.mana_cost : null,
+          type_line: typeof face.type_line === 'string' ? face.type_line : null,
+          oracle_text: typeof face.oracle_text === 'string' ? face.oracle_text : null,
+          colors: Array.isArray(face.colors) ? face.colors.filter((value): value is string => typeof value === 'string') : null,
+          color_indicator: Array.isArray(face.color_indicator)
+            ? face.color_indicator.filter((value): value is string => typeof value === 'string')
+            : null,
+          power: typeof face.power === 'string' ? face.power : null,
+          toughness: typeof face.toughness === 'string' ? face.toughness : null,
+          loyalty: typeof face.loyalty === 'string' ? face.loyalty : null,
+          defense: typeof face.defense === 'string' ? face.defense : null,
+        }))
+    : null
+
+  return {
+    object: typeof card.object === 'string' ? card.object : null,
+    id: typeof card.id === 'string' ? card.id : null,
+    name: card.name,
+    layout: typeof card.layout === 'string' ? card.layout : null,
+    mana_cost: typeof card.mana_cost === 'string' ? card.mana_cost : null,
+    cmc: typeof card.cmc === 'number' ? card.cmc : null,
+    type_line: typeof card.type_line === 'string' ? card.type_line : null,
+    oracle_text: typeof card.oracle_text === 'string' ? card.oracle_text : null,
+    colors: Array.isArray(card.colors) ? card.colors.filter((value): value is string => typeof value === 'string') : null,
+    card_faces: cardFaces,
+    color_identity: Array.isArray(card.color_identity)
+      ? card.color_identity.filter((value): value is string => typeof value === 'string')
+      : null,
+    keywords: Array.isArray(card.keywords)
+      ? card.keywords.filter((value): value is string => typeof value === 'string')
+      : null,
+    legalities:
+      card.legalities && typeof card.legalities === 'object'
+        ? Object.fromEntries(
+            Object.entries(card.legalities).filter(
+              (entry): entry is [string, string] => typeof entry[1] === 'string',
+            ),
+          )
+        : null,
+    rulings,
+  }
 }
 
 function getCollectionLookupName(name: string) {
@@ -168,6 +303,93 @@ async function fetchCardPreview({ name, setCode, collectorNumber }: CardPreviewL
   }
 
   return toCardPreviewResult((await namedResponse.json()) as ScryfallCard)
+}
+
+async function fetchNamedCard(name: string, mode: 'exact' | 'fuzzy') {
+  const response = await fetch(`https://api.scryfall.com/cards/named?${mode}=${encodeURIComponent(normalizeCardQuery(name))}`, {
+    headers: { Accept: 'application/json' },
+  })
+
+  if (response.ok) {
+    return (await response.json()) as ScryfallJudgeCard
+  }
+
+  if (response.status === 404) {
+    return null
+  }
+
+  const errorPayload = (await response.json()) as ScryfallErrorResponse
+  throw new Error(errorPayload.details || `Could not find ${name} on Scryfall.`)
+}
+
+async function fetchCardSuggestions(name: string) {
+  const response = await fetch(`https://api.scryfall.com/cards/autocomplete?q=${encodeURIComponent(normalizeCardQuery(name))}`, {
+    headers: { Accept: 'application/json' },
+  })
+
+  if (response.ok) {
+    const payload = (await response.json()) as ScryfallAutocompleteResponse
+    return [...new Set(payload.data.filter(Boolean))].slice(0, 5)
+  }
+
+  const searchResults = await searchCards(name)
+  return [...new Set(searchResults.map((card) => card.name))].slice(0, 5)
+}
+
+async function fetchCardRulings(rulingsUri: string) {
+  const response = await fetch(rulingsUri, {
+    headers: { Accept: 'application/json' },
+  })
+
+  if (!response.ok) {
+    throw new Error('Could not load card rulings from Scryfall.')
+  }
+
+  const payload = (await response.json()) as ScryfallListResponse<ScryfallRuling>
+  return payload.data
+}
+
+export async function fetchJudgeCardContext(name: string): Promise<JudgeCardContext> {
+  const card = await fetchNamedCard(name, 'exact') ?? await fetchNamedCard(name, 'fuzzy')
+
+  if (!card) {
+    throw new Error(`Could not find ${name} on Scryfall.`)
+  }
+
+  const rulings = typeof card.rulings_uri === 'string' ? await fetchCardRulings(card.rulings_uri) : []
+
+  return toJudgeCardContext(card, rulings)
+}
+
+export async function fetchJudgeCardContexts(question: string) {
+  const cardNames = parseReferencedCardNames(question)
+  const results = await Promise.all(
+    cardNames.map(async (name) => {
+      const card = await fetchNamedCard(name, 'exact') ?? await fetchNamedCard(name, 'fuzzy')
+
+      if (!card) {
+        return {
+          kind: 'unresolved' as const,
+          unresolved: {
+            name,
+            suggestions: await fetchCardSuggestions(name),
+          },
+        }
+      }
+
+      const rulings = typeof card.rulings_uri === 'string' ? await fetchCardRulings(card.rulings_uri) : []
+
+      return {
+        kind: 'resolved' as const,
+        card: toJudgeCardContext(card, rulings),
+      }
+    }),
+  )
+
+  return {
+    cards: results.flatMap((result) => (result.kind === 'resolved' ? [result.card] : [])),
+    unresolved: results.flatMap((result) => (result.kind === 'unresolved' ? [result.unresolved] : [])),
+  }
 }
 
 export function getCardPreview(lookup: CardPreviewLookup) {
