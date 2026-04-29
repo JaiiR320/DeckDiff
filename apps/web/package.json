@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "vite dev --port 3000",
     "build": "vite build",
-    "check": "tsc -p tsconfig.json --noEmit",
+    "check": "tsgo -p tsconfig.json --noEmit",
     "preview": "vite preview",
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",
@@ -46,7 +46,6 @@
     "@vitejs/plugin-react": "^6.0.1",
     "drizzle-kit": "^0.31.10",
     "jsdom": "^28.1.0",
-    "typescript": "^5.7.2",
     "vite": "^8.0.0",
     "vitest": "^3.0.5"
   }

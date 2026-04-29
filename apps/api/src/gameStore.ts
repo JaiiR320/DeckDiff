@@ -1,10 +1,5 @@
 import { applyCommand, createGame, createId, toGameView } from "@deckdiff/core";
-import type {
-  GameCommand,
-  GameEvent,
-  GameState,
-  GameView,
-} from "@deckdiff/schemas";
+import type { GameCommand, GameEvent, GameState, GameView } from "@deckdiff/schemas";
 
 export type GameMetadata = {
   id: string;

@@ -6,8 +6,8 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "check": "tsc -p tsconfig.json --noEmit"
+    "build": "tsgo -p tsconfig.json",
+    "check": "tsgo -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "zod": "^3.24.3"

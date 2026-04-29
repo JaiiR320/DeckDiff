@@ -1,9 +1,4 @@
-import {
-  Link,
-  createFileRoute,
-  redirect,
-  useNavigate,
-} from "@tanstack/react-router";
+import { Link, createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { Pencil, Save } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
@@ -16,16 +11,9 @@ import { ExportDeckModal } from "../components/deck-editor/modals/ExportDeckModa
 import { ImportDeckModal } from "../components/deck-editor/modals/ImportDeckModal";
 import { SaveDeckModal } from "../components/deck-editor/modals/SaveDeckModal";
 import { SaveHistoryPanel } from "../components/deck-editor/SaveHistoryPanel";
-import {
-  buildEditorRows,
-  groupEditorRows,
-} from "../components/deck-editor/editorRows";
+import { buildEditorRows, groupEditorRows } from "../components/deck-editor/editorRows";
 import type { DeckSave } from "../lib/deck";
-import type {
-  DeckState,
-  ExportModalState,
-  EditorRow,
-} from "../components/deck-editor/types";
+import type { DeckState, ExportModalState, EditorRow } from "../components/deck-editor/types";
 import {
   formatDecklist,
   formatDeckExport,
@@ -41,12 +29,7 @@ import {
   type SearchCardResult,
   validateDeckEntries,
 } from "../lib/scryfall";
-import {
-  deleteDeckForUser,
-  getDeck,
-  renameDeckForUser,
-  saveDeckForUser,
-} from "#/server/decks";
+import { deleteDeckForUser, getDeck, renameDeckForUser, saveDeckForUser } from "#/server/decks";
 import { getCurrentSession } from "#/server/session";
 
 export const Route = createFileRoute("/decks_/$deckId")({
@@ -68,9 +51,7 @@ export const Route = createFileRoute("/decks_/$deckId")({
       return {
         deck: null,
         errorMessage:
-          error instanceof Error
-            ? error.message
-            : "Could not load this deck right now.",
+          error instanceof Error ? error.message : "Could not load this deck right now.",
       };
     }
   },
@@ -91,12 +72,8 @@ function DeckDetailPage() {
   const { deckId } = Route.useParams();
   const loaderData = Route.useLoaderData();
   const navigate = useNavigate();
-  const [deck, setDeck] = useState<DeckItem | undefined>(
-    loaderData.deck ?? undefined,
-  );
-  const [deckErrorMessage, setDeckErrorMessage] = useState<string | null>(
-    loaderData.errorMessage,
-  );
+  const [deck, setDeck] = useState<DeckItem | undefined>(loaderData.deck ?? undefined);
+  const [deckErrorMessage, setDeckErrorMessage] = useState<string | null>(loaderData.errorMessage);
   const [baselineDeck, setBaselineDeck] = useState<DeckState>(emptyDeckState);
   const [workingCards, setWorkingCards] = useState<ValidatedDeckCard[]>([]);
   const [isImportOpen, setIsImportOpen] = useState(false);
@@ -115,15 +92,11 @@ function DeckDetailPage() {
     saveB: DeckSave;
   } | null>(null);
   const [showDiffOnly, setShowDiffOnly] = useState(false);
-  const [previewLookup, setPreviewLookup] = useState<CardPreviewLookup | null>(
-    null,
+  const [previewLookup, setPreviewLookup] = useState<CardPreviewLookup | null>(null);
+  const [previewCard, setPreviewCard] = useState<CardPreviewResult | null>(null);
+  const [previewStatus, setPreviewStatus] = useState<"idle" | "loading" | "ready" | "error">(
+    "idle",
   );
-  const [previewCard, setPreviewCard] = useState<CardPreviewResult | null>(
-    null,
-  );
-  const [previewStatus, setPreviewStatus] = useState<
-    "idle" | "loading" | "ready" | "error"
-  >("idle");
   const [isPreviewPinned, setIsPreviewPinned] = useState(false);
   const previewRequestIdRef = useRef(0);
 
@@ -141,10 +114,7 @@ function DeckDetailPage() {
   const mergedWorkingCards = mergeValidatedCards(compareWorkingCards);
   const editorRows = buildEditorRows(compareBaselineCards, compareWorkingCards);
   const groupedRows = groupEditorRows(editorRows);
-  const resultCardTotal = editorRows.reduce(
-    (total, row) => total + row.currentQuantity,
-    0,
-  );
+  const resultCardTotal = editorRows.reduce((total, row) => total + row.currentQuantity, 0);
   const emptyMessage =
     baselineDeck.status === "loading"
       ? "Validating the imported deck with Scryfall."
@@ -278,9 +248,7 @@ function DeckDetailPage() {
       const { validCards, warnings } = await validateDraftDeck(rawText);
 
       if (mode === "bulk-add") {
-        setWorkingCards((currentCards) =>
-          mergeValidatedCards([...currentCards, ...validCards]),
-        );
+        setWorkingCards((currentCards) => mergeValidatedCards([...currentCards, ...validCards]));
         setBaselineDeck((currentDeck) => ({
           ...currentDeck,
           invalidCards: warnings,
@@ -318,9 +286,7 @@ function DeckDetailPage() {
           invalidCards: [],
           status: "error",
           errorMessage:
-            error instanceof Error
-              ? error.message
-              : "Could not import this deck right now.",
+            error instanceof Error ? error.message : "Could not import this deck right now.",
         });
         setWorkingCards([]);
         return;
@@ -367,9 +333,7 @@ function DeckDetailPage() {
       closeSaveModal();
     } catch (error) {
       setDeckErrorMessage(
-        error instanceof Error
-          ? error.message
-          : "Could not save deck right now.",
+        error instanceof Error ? error.message : "Could not save deck right now.",
       );
     }
   }
@@ -400,9 +364,7 @@ function DeckDetailPage() {
       closeDeckActionsModal();
     } catch (error) {
       setDeckErrorMessage(
-        error instanceof Error
-          ? error.message
-          : "Could not rename deck right now.",
+        error instanceof Error ? error.message : "Could not rename deck right now.",
       );
     }
   }
@@ -416,9 +378,7 @@ function DeckDetailPage() {
       await navigate({ to: "/decks" });
     } catch (error) {
       setDeckErrorMessage(
-        error instanceof Error
-          ? error.message
-          : "Could not delete deck right now.",
+        error instanceof Error ? error.message : "Could not delete deck right now.",
       );
     }
   }
@@ -459,10 +419,8 @@ function DeckDetailPage() {
 
   function handleCompareSaves(saveA: DeckSave, saveB: DeckSave) {
     // Ensure saveA is the older one
-    const olderSave =
-      new Date(saveA.savedAt) <= new Date(saveB.savedAt) ? saveA : saveB;
-    const newerSave =
-      new Date(saveA.savedAt) <= new Date(saveB.savedAt) ? saveB : saveA;
+    const olderSave = new Date(saveA.savedAt) <= new Date(saveB.savedAt) ? saveA : saveB;
+    const newerSave = new Date(saveA.savedAt) <= new Date(saveB.savedAt) ? saveB : saveA;
     setCompareSaves({ saveA: olderSave, saveB: newerSave });
     setCompareMode(true);
     setActiveTab("editor");
@@ -490,9 +448,7 @@ function DeckDetailPage() {
   async function handleImportDeck(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    await importDraftDeck(
-      workingCards.length > 0 ? "bulk-add" : "replace-empty",
-    );
+    await importDraftDeck(workingCards.length > 0 ? "bulk-add" : "replace-empty");
   }
 
   async function handleOverrideDeck() {
@@ -506,10 +462,7 @@ function DeckDetailPage() {
     }));
   }
 
-  function updatePreviewCard(
-    nextPreview: CardPreviewLookup,
-    source: "hover" | "manual" = "hover",
-  ) {
+  function updatePreviewCard(nextPreview: CardPreviewLookup, source: "hover" | "manual" = "hover") {
     if (isPreviewPinned && source === "hover") {
       return;
     }
@@ -552,9 +505,7 @@ function DeckDetailPage() {
 
   function adjustQuantity(row: EditorRow, delta: number) {
     setWorkingCards((currentCards) => {
-      const currentIndex = currentCards.findIndex(
-        (card) => card.oracleId === row.oracleId,
-      );
+      const currentIndex = currentCards.findIndex((card) => card.oracleId === row.oracleId);
 
       if (currentIndex === -1) {
         if (delta <= 0) {
@@ -590,9 +541,7 @@ function DeckDetailPage() {
 
   function restoreCard(row: EditorRow) {
     setWorkingCards((currentCards) => {
-      const nextCards = currentCards.filter(
-        (card) => card.oracleId !== row.oracleId,
-      );
+      const nextCards = currentCards.filter((card) => card.oracleId !== row.oracleId);
 
       if (row.baselineQuantity <= 0) {
         return nextCards;
@@ -684,9 +633,7 @@ function DeckDetailPage() {
             >
               Back
             </Link>
-            <h1 className="text-3xl font-semibold tracking-tight text-zinc-100">
-              {deckName}
-            </h1>
+            <h1 className="text-3xl font-semibold tracking-tight text-zinc-100">{deckName}</h1>
             {deck && deck.saves.length > 0 && (
               <span className="rounded-lg bg-zinc-900 px-2 py-1 text-sm text-zinc-500">
                 {deck.saves.length} save{deck.saves.length === 1 ? "" : "s"}
@@ -761,8 +708,7 @@ function DeckDetailPage() {
                 onExport={exportResult}
                 exportDisabled={
                   isHydrated &&
-                  (mergedWorkingCards.length === 0 ||
-                    baselineDeck.status === "loading")
+                  (mergedWorkingCards.length === 0 || baselineDeck.status === "loading")
                 }
                 onAddCard={addCard}
                 onPreviewCard={(card) =>
@@ -786,10 +732,7 @@ function DeckDetailPage() {
                 </div>
 
                 <div className="min-w-0">
-                  <DeckAlerts
-                    deck={baselineDeck}
-                    onDismissWarnings={dismissWarnings}
-                  />
+                  <DeckAlerts deck={baselineDeck} onDismissWarnings={dismissWarnings} />
 
                   <EditorDeckList
                     groupedRows={groupedRows}

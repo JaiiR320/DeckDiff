@@ -60,12 +60,9 @@ function AuthPage() {
 
       await navigate({ to: "/decks" });
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Authentication failed.";
+      const message = error instanceof Error ? error.message : "Authentication failed.";
       if (mode === "sign-in" && message === "Invalid email or password") {
-        setErrorMessage(
-          "No account was found for that email/password. Try Sign up first.",
-        );
+        setErrorMessage("No account was found for that email/password. Try Sign up first.");
       } else {
         setErrorMessage(message);
       }
@@ -84,9 +81,7 @@ function AuthPage() {
     <main className="flex h-full items-center justify-center px-6 py-12">
       <div className="w-full max-w-md rounded-3xl border border-zinc-800 bg-zinc-950/90 p-8 shadow-2xl shadow-black/40">
         <div className="space-y-2 text-center">
-          <p className="text-sm font-medium uppercase tracking-[0.3em] text-cyan-300">
-            DeckDiff
-          </p>
+          <p className="text-sm font-medium uppercase tracking-[0.3em] text-cyan-300">DeckDiff</p>
           <h1 className="text-3xl font-semibold text-zinc-100">{title}</h1>
           <p className="text-sm text-zinc-400">{subtitle}</p>
         </div>
@@ -96,9 +91,7 @@ function AuthPage() {
             type="button"
             onClick={() => setMode("sign-in")}
             className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
-              mode === "sign-in"
-                ? "bg-cyan-400 text-zinc-950"
-                : "text-zinc-400 hover:text-zinc-200"
+              mode === "sign-in" ? "bg-cyan-400 text-zinc-950" : "text-zinc-400 hover:text-zinc-200"
             }`}
           >
             Sign in
@@ -107,9 +100,7 @@ function AuthPage() {
             type="button"
             onClick={() => setMode("sign-up")}
             className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
-              mode === "sign-up"
-                ? "bg-cyan-400 text-zinc-950"
-                : "text-zinc-400 hover:text-zinc-200"
+              mode === "sign-up" ? "bg-cyan-400 text-zinc-950" : "text-zinc-400 hover:text-zinc-200"
             }`}
           >
             Sign up
@@ -118,10 +109,7 @@ function AuthPage() {
 
         <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
           <div>
-            <label
-              className="block text-sm font-medium text-zinc-400"
-              htmlFor="auth-email"
-            >
+            <label className="block text-sm font-medium text-zinc-400" htmlFor="auth-email">
               Email
             </label>
             <input
@@ -138,18 +126,13 @@ function AuthPage() {
           </div>
 
           <div>
-            <label
-              className="block text-sm font-medium text-zinc-400"
-              htmlFor="auth-password"
-            >
+            <label className="block text-sm font-medium text-zinc-400" htmlFor="auth-password">
               Password
             </label>
             <input
               id="auth-password"
               type="password"
-              autoComplete={
-                mode === "sign-in" ? "current-password" : "new-password"
-              }
+              autoComplete={mode === "sign-in" ? "current-password" : "new-password"}
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               className="mt-2 w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-base text-zinc-100 outline-none transition placeholder:text-zinc-600 focus:border-cyan-500"
@@ -170,9 +153,7 @@ function AuthPage() {
             disabled={isSubmitting}
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-400 px-4 py-3 text-sm font-semibold text-zinc-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isSubmitting ? (
-              <LoaderCircle className="h-4 w-4 animate-spin" />
-            ) : null}
+            {isSubmitting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
             {mode === "sign-in" ? "Sign in" : "Create account"}
           </button>
         </form>

@@ -64,17 +64,11 @@ const cardCategorySchema = z.enum([
 const validatedDeckCardSchema = z.object({
   oracleId: z.string().trim().min(1, "Card oracle ID is required."),
   name: z.string().trim().min(1, "Card name is required."),
-  quantity: z
-    .number()
-    .int()
-    .positive("Card quantity must be greater than zero."),
+  quantity: z.number().int().positive("Card quantity must be greater than zero."),
   typeLine: z.string().trim().min(1, "Card type line is required."),
   category: cardCategorySchema,
   setCode: z.string().trim().min(1, "Card set code is required."),
-  collectorNumber: z
-    .string()
-    .trim()
-    .min(1, "Card collector number is required."),
+  collectorNumber: z.string().trim().min(1, "Card collector number is required."),
 });
 
 const saveDeckInputSchema = z.object({
@@ -145,9 +139,7 @@ async function getDeckRowsWithSaves(userId: string) {
     savesByDeckId.set(save.deckId, current);
   }
 
-  return deckRows.map((deck) =>
-    mapDeck(deck, savesByDeckId.get(deck.id) ?? []),
-  );
+  return deckRows.map((deck) => mapDeck(deck, savesByDeckId.get(deck.id) ?? []));
 }
 
 async function getDeckWithSavesBySlug(userId: string, slug: string) {
@@ -200,11 +192,7 @@ async function getUniqueDeckIdentity(
   return nextSlug;
 }
 
-async function getUniqueSlug(
-  userId: string,
-  name: string,
-  currentDeckId?: string,
-) {
+async function getUniqueSlug(userId: string, name: string, currentDeckId?: string) {
   return getUniqueDeckIdentity(userId, name, currentDeckId);
 }
 

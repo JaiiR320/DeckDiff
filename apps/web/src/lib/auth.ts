@@ -13,9 +13,7 @@ const authSecret =
   process.env.BETTER_AUTH_SECRET ??
   process.env.AUTH_SECRET ??
   process.env.SECRET ??
-  (process.env.NODE_ENV === "production"
-    ? undefined
-    : "deckdiff-dev-auth-secret");
+  (process.env.NODE_ENV === "production" ? undefined : "deckdiff-dev-auth-secret");
 
 const dashApiKey = process.env.BETTER_AUTH_API_KEY?.trim();
 
@@ -49,9 +47,7 @@ const trustedOrigins = [
   getVercelOrigin(process.env.VERCEL_BRANCH_URL),
   getVercelOrigin(process.env.VERCEL_PROJECT_PRODUCTION_URL),
   "*.vercel.app",
-  ...(process.env.BETTER_AUTH_TRUSTED_ORIGINS?.split(",").map((origin) =>
-    origin.trim(),
-  ) ?? []),
+  ...(process.env.BETTER_AUTH_TRUSTED_ORIGINS?.split(",").map((origin) => origin.trim()) ?? []),
 ].filter((origin): origin is string => Boolean(origin));
 
 export const auth = betterAuth({

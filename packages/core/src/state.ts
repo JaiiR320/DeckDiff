@@ -1,10 +1,4 @@
-import type {
-  GameState,
-  GameObject,
-  NewGameRequest,
-  PlayerState,
-  Zone,
-} from "@deckdiff/schemas";
+import type { GameState, GameObject, NewGameRequest, PlayerState, Zone } from "@deckdiff/schemas";
 import { createId } from "./ids.js";
 
 const playerZones = ["library", "hand", "graveyard"] as const;
@@ -33,29 +27,18 @@ export function createGame(request: NewGameRequest): GameState {
 
   const playerIds = new Set<string>();
   for (const player of players) {
-    if (playerIds.has(player.id))
-      throw new Error(`duplicate player id: ${player.id}`);
+    if (playerIds.has(player.id)) throw new Error(`duplicate player id: ${player.id}`);
     playerIds.add(player.id);
   }
-  if (
-    request.activePlayerId !== undefined &&
-    !playerIds.has(request.activePlayerId)
-  ) {
+  if (request.activePlayerId !== undefined && !playerIds.has(request.activePlayerId)) {
     throw new Error(`active player not found: ${request.activePlayerId}`);
   }
-  if (
-    request.priorityPlayerId !== undefined &&
-    !playerIds.has(request.priorityPlayerId)
-  ) {
+  if (request.priorityPlayerId !== undefined && !playerIds.has(request.priorityPlayerId)) {
     throw new Error(`priority player not found: ${request.priorityPlayerId}`);
   }
 
   const battlefield = request.players.flatMap((player, index) =>
-    createCards(
-      player.battlefield ?? [],
-      players[index]!.id,
-      players[index]!.id,
-    ),
+    createCards(player.battlefield ?? [], players[index]!.id, players[index]!.id),
   );
   const exile = request.players.flatMap((player, index) =>
     createCards(player.exile ?? [], players[index]!.id, players[index]!.id),

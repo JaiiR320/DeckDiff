@@ -9,11 +9,6 @@
     "skipLibCheck": true,
     "declaration": true,
     "declarationMap": true,
-    "sourceMap": true,
-    "baseUrl": ".",
-    "paths": {
-      "@deckdiff/core": ["packages/core/src/index.ts"],
-      "@deckdiff/schemas": ["packages/schemas/src/index.ts"],
-    },
-  },
+    "sourceMap": true
+  }
 }

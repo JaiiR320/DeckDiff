@@ -14,9 +14,7 @@ describe("virtual table engine", () => {
     });
 
     expect(game.players).toHaveLength(4);
-    expect(game.players[0]?.zones.library.objects[0]?.name).toBe(
-      "Lightning Bolt",
-    );
+    expect(game.players[0]?.zones.library.objects[0]?.name).toBe("Lightning Bolt");
     expect(game.players[0]?.zones.library.objects[0]?.cardId).toBeDefined();
     expect(game.players[0]?.zones.library.objects[0]?.objectId).toBeDefined();
     expect(game.activePlayerId).toBe(game.players[0]?.id);
@@ -83,9 +81,7 @@ describe("virtual table engine", () => {
 
   it("renames players without changing their stable id or references", () => {
     let game = createGame({
-      players: [
-        { id: "p1", name: "Old Name", battlefield: ["Llanowar Elves"] },
-      ],
+      players: [{ id: "p1", name: "Old Name", battlefield: ["Llanowar Elves"] }],
     });
     const permanent = game.zones.battlefield.objects[0]!;
 
@@ -159,9 +155,7 @@ describe("virtual table engine", () => {
     let game = createGame({
       players: [{ id: "p1", name: "Jair", library: ["Opt", "Island"] }],
     });
-    const objectIds = game.players[0]!.zones.library.objects.map(
-      (object) => object.objectId,
-    );
+    const objectIds = game.players[0]!.zones.library.objects.map((object) => object.objectId);
 
     const result = applyCommand(game, {
       type: "zone.moveMany",
@@ -171,9 +165,7 @@ describe("virtual table engine", () => {
     game = result.state;
 
     expect(game.players[0]?.zones.library.objects).toHaveLength(0);
-    expect(
-      game.players[0]?.zones.hand.objects.map((card) => card.name),
-    ).toEqual(["Opt", "Island"]);
+    expect(game.players[0]?.zones.hand.objects.map((card) => card.name)).toEqual(["Opt", "Island"]);
     expect(game.revision).toBe(1);
     expect(game.eventLog).toHaveLength(1);
     expect(result.event.type).toBe("zone.moveMany");
@@ -253,9 +245,7 @@ describe("virtual table engine", () => {
       counters: [{ type: "poison", amount: 1 }],
     }).state;
 
-    expect(game.zones.battlefield.objects[0]?.counters).toEqual([
-      { type: "+1/+1", amount: 2 },
-    ]);
+    expect(game.zones.battlefield.objects[0]?.counters).toEqual([{ type: "+1/+1", amount: 2 }]);
     expect(game.players[0]?.counters).toEqual([{ type: "poison", amount: 1 }]);
   });
 
@@ -336,28 +326,21 @@ describe("virtual table engine", () => {
       insertIndex: 0,
     }).state;
 
-    expect(game.zones.stack.objects.map((item) => item.name)).toEqual([
-      "Top",
-      "Bottom",
-    ]);
+    expect(game.zones.stack.objects.map((item) => item.name)).toEqual(["Top", "Bottom"]);
 
     const topObjectId = game.zones.stack.objects[0]!.objectId;
     game = applyCommand(game, {
       type: "object.delete",
       objectId: topObjectId,
     }).state;
-    expect(game.zones.stack.objects.map((item) => item.name)).toEqual([
-      "Bottom",
-    ]);
+    expect(game.zones.stack.objects.map((item) => item.name)).toEqual(["Bottom"]);
   });
 
   it("reorders any zone by exact object IDs", () => {
     let game = createGame({
       players: [{ id: "p1", name: "Jair", library: ["One", "Two", "Three"] }],
     });
-    const ids = game.players[0]!.zones.library.objects.map(
-      (object) => object.objectId,
-    );
+    const ids = game.players[0]!.zones.library.objects.map((object) => object.objectId);
 
     game = applyCommand(game, {
       type: "zone.reorder",
@@ -365,9 +348,11 @@ describe("virtual table engine", () => {
       objectIds: [ids[2]!, ids[0]!, ids[1]!],
     }).state;
 
-    expect(
-      game.players[0]!.zones.library.objects.map((object) => object.name),
-    ).toEqual(["Three", "One", "Two"]);
+    expect(game.players[0]!.zones.library.objects.map((object) => object.name)).toEqual([
+      "Three",
+      "One",
+      "Two",
+    ]);
   });
 
   it("clears visibility only for library order changes", () => {
@@ -398,9 +383,7 @@ describe("virtual table engine", () => {
       objectIds: [handObjectId],
     }).state;
 
-    expect(
-      game.players[0]!.zones.library.objects[0]?.visibility,
-    ).toBeUndefined();
+    expect(game.players[0]!.zones.library.objects[0]?.visibility).toBeUndefined();
     expect(game.players[0]!.zones.hand.objects[0]?.visibility).toEqual({
       revealedTo: "all",
     });
@@ -432,9 +415,7 @@ describe("virtual table engine", () => {
       zone: { zone: "hand", playerId: "p1" },
     }).state;
 
-    expect(
-      game.players[0]!.zones.library.objects[0]?.visibility,
-    ).toBeUndefined();
+    expect(game.players[0]!.zones.library.objects[0]?.visibility).toBeUndefined();
     expect(game.players[0]!.zones.hand.objects[0]?.visibility).toEqual({
       revealedTo: "all",
     });
@@ -471,9 +452,10 @@ describe("virtual table engine", () => {
     }).state;
 
     const movedFirst = game.players[0]!.zones.library.objects[1]!;
-    expect(
-      game.players[0]!.zones.library.objects.map((object) => object.name),
-    ).toEqual(["Two", "One"]);
+    expect(game.players[0]!.zones.library.objects.map((object) => object.name)).toEqual([
+      "Two",
+      "One",
+    ]);
     expect(movedFirst.objectId).toBe(first.objectId);
     expect(movedFirst.counters).toEqual([{ type: "test", amount: 1 }]);
     expect(movedFirst.status.faceDown).toBe(true);
@@ -549,9 +531,7 @@ describe("virtual table engine", () => {
       kind: "card",
       insertIndex: 0,
     }).state;
-    expect(game.players[0]!.zones.graveyard.objects[0]?.name).toBe(
-      "Lightning Bolt",
-    );
+    expect(game.players[0]!.zones.graveyard.objects[0]?.name).toBe("Lightning Bolt");
   });
 
   it("creates tokens, copies objects, and sets metadata", () => {
@@ -590,13 +570,9 @@ describe("virtual table engine", () => {
 
     expect(game.zones.battlefield.objects.at(-2)?.kind).toBe("token");
     expect(game.zones.battlefield.objects.at(-2)?.cardId).toBeUndefined();
-    expect(game.zones.battlefield.objects.at(-1)?.copySourceObjectId).toBe(
-      sourceObjectId,
-    );
+    expect(game.zones.battlefield.objects.at(-1)?.copySourceObjectId).toBe(sourceObjectId);
     expect(game.zones.battlefield.objects.at(-1)?.ownerPlayerId).toBe("p2");
-    expect(game.zones.battlefield.objects.at(-1)?.controllerPlayerId).toBe(
-      "p1",
-    );
+    expect(game.zones.battlefield.objects.at(-1)?.controllerPlayerId).toBe("p1");
     expect(game.zones.stack.objects[0]?.kind).toBe("copy");
     expect(game.zones.stack.objects[0]?.ownerPlayerId).toBe("p1");
     expect(game.zones.stack.objects[0]?.controllerPlayerId).toBe("p1");
@@ -645,15 +621,9 @@ describe("virtual table engine", () => {
     }).state;
 
     expect(game.players[0]!.zones.hand.objects[0]?.visibility).toBeUndefined();
-    expect(game.players[0]!.zones.hand.objects[0]?.annotations).toEqual([
-      "chosen",
-    ]);
-    expect(
-      game.players[0]!.zones.hand.objects[0]?.ownerPlayerId,
-    ).toBeUndefined();
-    expect(
-      game.players[0]!.zones.hand.objects[0]?.controllerPlayerId,
-    ).toBeUndefined();
+    expect(game.players[0]!.zones.hand.objects[0]?.annotations).toEqual(["chosen"]);
+    expect(game.players[0]!.zones.hand.objects[0]?.ownerPlayerId).toBeUndefined();
+    expect(game.players[0]!.zones.hand.objects[0]?.controllerPlayerId).toBeUndefined();
   });
 
   it("requires explicit null to clear optional object fields", () => {
@@ -663,10 +633,9 @@ describe("virtual table engine", () => {
         objectId: "obj",
       }).success,
     ).toBe(false);
-    expect(
-      gameCommandSchema.safeParse({ type: "object.setOwner", objectId: "obj" })
-        .success,
-    ).toBe(false);
+    expect(gameCommandSchema.safeParse({ type: "object.setOwner", objectId: "obj" }).success).toBe(
+      false,
+    );
     expect(
       gameCommandSchema.safeParse({
         type: "object.setVisibility",
@@ -695,12 +664,10 @@ describe("virtual table engine", () => {
     const game = createGame({ players: [{ id: "p1", name: "Jair" }] });
 
     const withDuplicatePlayer = structuredClone(game);
-    withDuplicatePlayer.players.push(
-      structuredClone(withDuplicatePlayer.players[0]!),
+    withDuplicatePlayer.players.push(structuredClone(withDuplicatePlayer.players[0]!));
+    expect(() => applyCommand(game, { type: "state.replace", state: withDuplicatePlayer })).toThrow(
+      "duplicate player id",
     );
-    expect(() =>
-      applyCommand(game, { type: "state.replace", state: withDuplicatePlayer }),
-    ).toThrow("duplicate player id");
 
     const withMissingActivePlayer = structuredClone(game);
     withMissingActivePlayer.activePlayerId = "missing";
@@ -723,17 +690,15 @@ describe("virtual table engine", () => {
     const withMissingOwner = createGame({
       players: [{ id: "p1", name: "Jair", hand: ["Island"] }],
     });
-    withMissingOwner.players[0]!.zones.hand.objects[0]!.ownerPlayerId =
-      "missing";
-    expect(() =>
-      applyCommand(game, { type: "state.replace", state: withMissingOwner }),
-    ).toThrow("owner player not found");
+    withMissingOwner.players[0]!.zones.hand.objects[0]!.ownerPlayerId = "missing";
+    expect(() => applyCommand(game, { type: "state.replace", state: withMissingOwner })).toThrow(
+      "owner player not found",
+    );
 
     const withMissingController = createGame({
       players: [{ id: "p1", name: "Jair", hand: ["Island"] }],
     });
-    withMissingController.players[0]!.zones.hand.objects[0]!.controllerPlayerId =
-      "missing";
+    withMissingController.players[0]!.zones.hand.objects[0]!.controllerPlayerId = "missing";
     expect(() =>
       applyCommand(game, {
         type: "state.replace",
@@ -744,10 +709,9 @@ describe("virtual table engine", () => {
     const withMissingVisibilityPlayer = createGame({
       players: [{ id: "p1", name: "Jair", hand: ["Island"] }],
     });
-    withMissingVisibilityPlayer.players[0]!.zones.hand.objects[0]!.visibility =
-      {
-        revealedTo: ["missing"],
-      };
+    withMissingVisibilityPlayer.players[0]!.zones.hand.objects[0]!.visibility = {
+      revealedTo: ["missing"],
+    };
     expect(() =>
       applyCommand(game, {
         type: "state.replace",
@@ -769,9 +733,7 @@ describe("virtual table engine", () => {
       commandType: "note.add",
     });
 
-    expect(() =>
-      applyCommand(game, { type: "state.replace", state: replacement }),
-    ).not.toThrow();
+    expect(() => applyCommand(game, { type: "state.replace", state: replacement })).not.toThrow();
   });
 
   it("rejects structurally valid commands that reference missing IDs", () => {

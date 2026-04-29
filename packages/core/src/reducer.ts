@@ -25,10 +25,7 @@ export type ApplyCommandResult = {
   event: GameEvent;
 };
 
-type ObjectCreateInput = Extract<
-  GameCommand,
-  { type: "object.create" }
->["object"];
+type ObjectCreateInput = Extract<GameCommand, { type: "object.create" }>["object"];
 
 const defaultStatus: ObjectStatus = {
   tapped: false,
@@ -37,18 +34,11 @@ const defaultStatus: ObjectStatus = {
   phasedOut: false,
 };
 
-export function applyCommand(
-  current: GameState,
-  command: GameCommand,
-): ApplyCommandResult {
+export function applyCommand(current: GameState, command: GameCommand): ApplyCommandResult {
   if (command.type === "state.replace") {
     const nextState = gameStateSchema.parse(structuredClone(command.state));
     validateLiveStatePlayerReferences(nextState);
-    const event = createEvent(
-      nextState.revision + 1,
-      command,
-      "Replaced the full game state",
-    );
+    const event = createEvent(nextState.revision + 1, command, "Replaced the full game state");
     nextState.revision = event.revision;
     nextState.eventLog = [...nextState.eventLog, event];
     return { state: nextState, event };
@@ -57,12 +47,7 @@ export function applyCommand(
   const state = structuredClone(current);
   const message = mutate(state, command);
   const actorPlayerId = actorFor(command);
-  const event = createEvent(
-    state.revision + 1,
-    command,
-    message,
-    actorPlayerId,
-  );
+  const event = createEvent(state.revision + 1, command, message, actorPlayerId);
   state.revision = event.revision;
   state.eventLog.push(event);
   return { state, event };
@@ -136,10 +121,8 @@ function mutate(
     case "object.copy": {
       const source = findObject(state, command.sourceObjectId).object;
       const destination = getZone(state, command.to);
-      const controllerPlayerId =
-        command.controllerPlayerId ?? source.controllerPlayerId;
-      if (controllerPlayerId !== undefined)
-        requirePlayer(state, controllerPlayerId);
+      const controllerPlayerId = command.controllerPlayerId ?? source.controllerPlayerId;
+      if (controllerPlayerId !== undefined) requirePlayer(state, controllerPlayerId);
       const copy: GameObject = {
         objectId: createId("obj"),
         kind: command.kind ?? (command.to.zone === "stack" ? "copy" : "token"),
@@ -168,15 +151,13 @@ function mutate(
     }
     case "object.setController": {
       const { object } = findObject(state, command.objectId);
-      if (command.controllerPlayerId !== null)
-        requirePlayer(state, command.controllerPlayerId);
+      if (command.controllerPlayerId !== null) requirePlayer(state, command.controllerPlayerId);
       object.controllerPlayerId = command.controllerPlayerId ?? undefined;
       return `Set controller on ${object.name}`;
     }
     case "object.setOwner": {
       const { object } = findObject(state, command.objectId);
-      if (command.ownerPlayerId !== null)
-        requirePlayer(state, command.ownerPlayerId);
+      if (command.ownerPlayerId !== null) requirePlayer(state, command.ownerPlayerId);
       object.ownerPlayerId = command.ownerPlayerId ?? undefined;
       return `Set owner on ${object.name}`;
     }
@@ -194,38 +175,27 @@ function mutate(
     case "zone.reorder": {
       const zone = getZone(state, command.zone);
       if (command.objectIds.length !== zone.objects.length) {
-        throw new GameCommandError(
-          "zone reorder must include every object exactly once",
-        );
+        throw new GameCommandError("zone reorder must include every object exactly once");
       }
       if (new Set(command.objectIds).size !== command.objectIds.length) {
-        throw new GameCommandError(
-          "zone reorder cannot contain duplicate object IDs",
-        );
+        throw new GameCommandError("zone reorder cannot contain duplicate object IDs");
       }
       zone.objects = command.objectIds.map((objectId) => {
-        const object = zone.objects.find(
-          (candidate) => candidate.objectId === objectId,
-        );
-        if (!object)
-          throw new GameCommandError(`object not found in zone: ${objectId}`);
+        const object = zone.objects.find((candidate) => candidate.objectId === objectId);
+        if (!object) throw new GameCommandError(`object not found in zone: ${objectId}`);
         return object;
       });
-      if (shouldClearVisibilityForZoneOrderChange(command.zone))
-        clearZoneVisibility(zone);
+      if (shouldClearVisibilityForZoneOrderChange(command.zone)) clearZoneVisibility(zone);
       return `Reordered ${zoneLabel(state, command.zone)}`;
     }
     case "zone.shuffle": {
       const zone = getZone(state, command.zone);
       shuffle(zone.objects);
-      if (shouldClearVisibilityForZoneOrderChange(command.zone))
-        clearZoneVisibility(zone);
+      if (shouldClearVisibilityForZoneOrderChange(command.zone)) clearZoneVisibility(zone);
       return `Shuffled ${zoneLabel(state, command.zone)}`;
     }
     case "zone.moveMany": {
-      const removed = command.objectIds.map((objectId) =>
-        removeObject(state, objectId),
-      );
+      const removed = command.objectIds.map((objectId) => removeObject(state, objectId));
       const destination = getZone(state, command.to);
       const moved = removed.map((found) => {
         if (sameZone(found.zone, command.to)) {
@@ -242,8 +212,7 @@ function mutate(
       return `Moved ${moved.length} object${moved.length === 1 ? "" : "s"} to ${zoneLabel(state, command.to)}`;
     }
     case "priority.set": {
-      if (command.playerId !== undefined)
-        requirePlayer(state, command.playerId);
+      if (command.playerId !== undefined) requirePlayer(state, command.playerId);
       state.priorityPlayerId = command.playerId;
       return command.playerId
         ? `Priority set to ${requirePlayer(state, command.playerId).name}`
@@ -258,8 +227,7 @@ function mutate(
         : "Priority pass had no next player";
     }
     case "turn.set": {
-      if (command.activePlayerId !== undefined)
-        requirePlayer(state, command.activePlayerId);
+      if (command.activePlayerId !== undefined) requirePlayer(state, command.activePlayerId);
       state.activePlayerId = command.activePlayerId ?? state.activePlayerId;
       state.turnNumber = command.turnNumber ?? state.turnNumber;
       state.phase = command.phase ?? state.phase;
@@ -301,8 +269,7 @@ function validatePlayerReference(
 function validateLiveStatePlayerReferences(state: GameState): void {
   const playerIds = new Set<string>();
   for (const player of state.players) {
-    if (playerIds.has(player.id))
-      throw new GameCommandError(`duplicate player id: ${player.id}`);
+    if (playerIds.has(player.id)) throw new GameCommandError(`duplicate player id: ${player.id}`);
     playerIds.add(player.id);
   }
 
@@ -320,25 +287,15 @@ function validateLiveStatePlayerReferences(state: GameState): void {
   }
 }
 
-function validateZonePlayerReferences(
-  playerIds: ReadonlySet<string>,
-  zone: ZoneState,
-): void {
+function validateZonePlayerReferences(playerIds: ReadonlySet<string>, zone: ZoneState): void {
   for (const object of zone.objects) {
     validateObjectPlayerReferences(playerIds, object);
   }
 }
 
-function validateObjectPlayerReferences(
-  playerIds: ReadonlySet<string>,
-  object: GameObject,
-): void {
+function validateObjectPlayerReferences(playerIds: ReadonlySet<string>, object: GameObject): void {
   validatePlayerReference(playerIds, object.ownerPlayerId, "owner player");
-  validatePlayerReference(
-    playerIds,
-    object.controllerPlayerId,
-    "controller player",
-  );
+  validatePlayerReference(playerIds, object.controllerPlayerId, "controller player");
   if (!object.visibility || object.visibility.revealedTo === "all") return;
   object.visibility.revealedTo.forEach((playerId) =>
     validatePlayerReference(playerIds, playerId, "visibility player"),
@@ -346,18 +303,12 @@ function validateObjectPlayerReferences(
 }
 
 function getZone(state: GameState, zoneRef: ZoneRef): ZoneState {
-  if (
-    zoneRef.zone === "library" ||
-    zoneRef.zone === "hand" ||
-    zoneRef.zone === "graveyard"
-  ) {
-    if (!zoneRef.playerId)
-      throw new GameCommandError(`${zoneRef.zone} requires playerId`);
+  if (zoneRef.zone === "library" || zoneRef.zone === "hand" || zoneRef.zone === "graveyard") {
+    if (!zoneRef.playerId) throw new GameCommandError(`${zoneRef.zone} requires playerId`);
     return requirePlayer(state, zoneRef.playerId).zones[zoneRef.zone];
   }
 
-  if (zoneRef.playerId)
-    throw new GameCommandError(`${zoneRef.zone} is a shared zone`);
+  if (zoneRef.playerId) throw new GameCommandError(`${zoneRef.zone} is a shared zone`);
   if (
     zoneRef.zone === "battlefield" ||
     zoneRef.zone === "stack" ||
@@ -374,9 +325,7 @@ function findObject(state: GameState, objectId: string): ObjectLocation {
   for (const player of state.players) {
     for (const zone of allPlayerZones()) {
       const zoneState = player.zones[zone];
-      const index = zoneState.objects.findIndex(
-        (object) => object.objectId === objectId,
-      );
+      const index = zoneState.objects.findIndex((object) => object.objectId === objectId);
       if (index >= 0) {
         return {
           object: zoneState.objects[index]!,
@@ -390,9 +339,7 @@ function findObject(state: GameState, objectId: string): ObjectLocation {
 
   for (const zone of allSharedZones()) {
     const zoneState = state.zones[zone];
-    const index = zoneState.objects.findIndex(
-      (object) => object.objectId === objectId,
-    );
+    const index = zoneState.objects.findIndex((object) => object.objectId === objectId);
     if (index >= 0)
       return {
         object: zoneState.objects[index]!,
@@ -411,23 +358,14 @@ function removeObject(state: GameState, objectId: string): ObjectLocation {
   return { ...found, object: object! };
 }
 
-function insertObject(
-  zone: ZoneState,
-  object: GameObject,
-  insertIndex?: number,
-  offset = 0,
-): void {
-  const index =
-    insertIndex === undefined ? zone.objects.length : insertIndex + offset;
+function insertObject(zone: ZoneState, object: GameObject, insertIndex?: number, offset = 0): void {
+  const index = insertIndex === undefined ? zone.objects.length : insertIndex + offset;
   if (index > zone.objects.length)
     throw new GameCommandError(`insertIndex out of range: ${insertIndex}`);
   zone.objects.splice(index, 0, object);
 }
 
-function buildGameObject(
-  state: GameState,
-  object: ObjectCreateInput,
-): GameObject {
+function buildGameObject(state: GameState, object: ObjectCreateInput): GameObject {
   const created: GameObject = {
     objectId: createId("obj"),
     ...object,
@@ -456,8 +394,7 @@ function resetForZoneChange(
     objectId: createId("obj"),
     kind: overrides.kind ?? object.kind,
     ownerPlayerId: overrides.ownerPlayerId ?? object.ownerPlayerId,
-    controllerPlayerId:
-      overrides.controllerPlayerId ?? object.controllerPlayerId,
+    controllerPlayerId: overrides.controllerPlayerId ?? object.controllerPlayerId,
     counters: structuredClone(overrides.counters ?? []),
     status: { ...defaultStatus, ...overrides.status },
     visibility: overrides.visibility,
@@ -479,29 +416,19 @@ function applyObjectOverrides(
     ...object,
     kind: overrides.kind ?? object.kind,
     ownerPlayerId: overrides.ownerPlayerId ?? object.ownerPlayerId,
-    controllerPlayerId:
-      overrides.controllerPlayerId ?? object.controllerPlayerId,
-    counters: overrides.counters
-      ? structuredClone(overrides.counters)
-      : object.counters,
-    status: overrides.status
-      ? { ...object.status, ...overrides.status }
-      : object.status,
+    controllerPlayerId: overrides.controllerPlayerId ?? object.controllerPlayerId,
+    counters: overrides.counters ? structuredClone(overrides.counters) : object.counters,
+    status: overrides.status ? { ...object.status, ...overrides.status } : object.status,
     visibility: overrides.visibility ?? object.visibility,
   };
 }
 
 function validateObjectPlayers(state: GameState, object: GameObject): void {
-  if (object.ownerPlayerId !== undefined)
-    requirePlayer(state, object.ownerPlayerId);
-  if (object.controllerPlayerId !== undefined)
-    requirePlayer(state, object.controllerPlayerId);
+  if (object.ownerPlayerId !== undefined) requirePlayer(state, object.ownerPlayerId);
+  if (object.controllerPlayerId !== undefined) requirePlayer(state, object.controllerPlayerId);
 }
 
-function validateVisibility(
-  state: GameState,
-  visibility: GameObject["visibility"],
-): void {
+function validateVisibility(state: GameState, visibility: GameObject["visibility"]): void {
   if (!visibility || visibility.revealedTo === "all") return;
   visibility.revealedTo.forEach((playerId) => requirePlayer(state, playerId));
 }
@@ -529,28 +456,21 @@ function shuffle<T>(items: T[]): void {
 
 function nextPlayerId(state: GameState, from?: string): string | undefined {
   if (state.players.length === 0) return undefined;
-  const index = from
-    ? state.players.findIndex((player) => player.id === from)
-    : -1;
+  const index = from ? state.players.findIndex((player) => player.id === from) : -1;
   return state.players[(index + 1) % state.players.length]?.id;
 }
 
-function actorFor(
-  command: Exclude<GameCommand, { type: "state.replace" }>,
-): string | undefined {
+function actorFor(command: Exclude<GameCommand, { type: "state.replace" }>): string | undefined {
   if ("actorPlayerId" in command) return command.actorPlayerId;
   if ("playerId" in command) return command.playerId;
-  if ("controllerPlayerId" in command)
-    return command.controllerPlayerId ?? undefined;
+  if ("controllerPlayerId" in command) return command.controllerPlayerId ?? undefined;
   if ("ownerPlayerId" in command) return command.ownerPlayerId ?? undefined;
-  if ("object" in command)
-    return command.object.controllerPlayerId ?? command.object.ownerPlayerId;
+  if ("object" in command) return command.object.controllerPlayerId ?? command.object.ownerPlayerId;
   return undefined;
 }
 
 function zoneLabel(state: GameState, zoneRef: ZoneRef): string {
-  if (zoneRef.playerId)
-    return `${requirePlayer(state, zoneRef.playerId).name}'s ${zoneRef.zone}`;
+  if (zoneRef.playerId) return `${requirePlayer(state, zoneRef.playerId).name}'s ${zoneRef.zone}`;
   return zoneRef.zone;
 }
 
