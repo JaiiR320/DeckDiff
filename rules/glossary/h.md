@@ -4,7 +4,7 @@
 
 1. A zone. A player’s hand is where that player holds cards they have drawn but not played yet.
 2. All the cards in a player’s hand.
-See rule 402, “Hand.”
+   See rule 402, “Hand.”
 
 ## Hand Modifier
 
