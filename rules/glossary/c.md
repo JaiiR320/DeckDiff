@@ -231,7 +231,7 @@ Values of an object’s characteristics that are checked by copy effects. See ru
 
 1. To create a new object whose copiable values have been set to those of another object.
 2. An object whose copiable values have been set to those of another object.
-See rule 707, “Copying Objects.”
+   See rule 707, “Copying Objects.”
 
 ## Cost
 

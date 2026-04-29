@@ -8,7 +8,7 @@ To turn a face-up ongoing scheme card face down and put it on the bottom of its 
 
 1. Text on an object that explains what that object does or can do.
 2. An activated or triggered ability on the stack. This kind of ability is an object.
-See rule 113, “Abilities,” and section 6, “Spells, Abilities, and Effects.”
+   See rule 113, “Abilities,” and section 6, “Spells, Abilities, and Effects.”
 
 ## Ability Word
 
@@ -106,7 +106,7 @@ A keyword ability that can make a creature particularly brutal when it attacks. 
 
 1. A zone used only when playing “for keeps.”
 2. To put a card into the ante zone.
-See rule 407, “Ante.”
+   See rule 407, “Ante.”
 
 ## Any Target
 

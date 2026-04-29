@@ -44,4 +44,4 @@ A keyword ability that creates copies of a spell. See rule 702.69, “Gravestorm
 
 1. A zone. A player’s graveyard is their discard pile.
 2. All the cards in a player’s graveyard.
-See rule 404, “Graveyard.”
+   See rule 404, “Graveyard.”

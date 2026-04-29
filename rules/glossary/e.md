@@ -164,7 +164,7 @@ Damage dealt to a creature greater than what would be lethal damage or damage de
 
 1. A zone. Exile is essentially a holding area for cards. It used to be known as the “removed-from-the-game” zone.
 2. To put an object into the exile zone from whatever zone it’s currently in. An “exiled” card is one that’s been put into the exile zone.
-See rule 406, “Exile.”
+   See rule 406, “Exile.”
 
 ## Exhaust
 

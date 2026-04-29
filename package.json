@@ -7,14 +7,18 @@
     "check": "pnpm -r check",
     "dev:api": "pnpm --filter @deckdiff/api dev",
     "dev:web": "pnpm --filter @deckdiff/web dev",
-    "format": "oxfmt package.json pnpm-workspace.yaml tsconfig.base.json vitest.config.ts apps packages",
-    "format:check": "oxfmt --check package.json pnpm-workspace.yaml tsconfig.base.json vitest.config.ts apps packages",
-    "test": "vitest run"
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "fmt": "oxfmt",
+    "fmt:check": "oxfmt --check",
+    "test": "vitest run",
+    "verify": "pnpm fmt:check && pnpm lint && pnpm check && pnpm test && pnpm build"
   },
   "devDependencies": {
     "@types/node": "^22.15.3",
     "@typescript/native-preview": "beta",
     "oxfmt": "^0.46.0",
+    "oxlint": "^1.62.0",
     "vitest": "^3.1.2"
   },
   "packageManager": "pnpm@10.33.0"
