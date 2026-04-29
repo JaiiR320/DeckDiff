@@ -85,7 +85,7 @@ function AuthPage() {
       <div className="w-full max-w-md rounded-3xl border border-zinc-800 bg-zinc-950/90 p-8 shadow-2xl shadow-black/40">
         <div className="space-y-2 text-center">
           <p className="text-sm font-medium uppercase tracking-[0.3em] text-cyan-300">
-            deckdiff
+            DeckDiff
           </p>
           <h1 className="text-3xl font-semibold text-zinc-100">{title}</h1>
           <p className="text-sm text-zinc-400">{subtitle}</p>

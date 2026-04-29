@@ -6,4 +6,6 @@ DO NOT attempt to run or stop the devserver, I am using devserve which is a CLI 
 
 When you are told to, or want to look at the logs of the devserve, look in .devserve/ there is an out.log and an err.log file.
 
-MUST USE pnpm and not npm for package management
+MUST USE pnpm and NOT npm for package management
+
+Read rules/ when discussing Magic: The Gathering in any capacity

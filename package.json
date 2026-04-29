@@ -1,7 +1,8 @@
 {
-  "name": "mtg-engine",
+  "name": "deckdiff",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@10.33.0",
   "scripts": {
     "build": "pnpm -r build",
     "check": "pnpm -r check",

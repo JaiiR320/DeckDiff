@@ -22,7 +22,7 @@ export const createGithubIssue = createServerFn({ method: "POST" })
     const label = data.issueType === "bug" ? "bug" : "feature";
 
     const res = await fetch(
-      "https://api.github.com/repos/JaiiR320/@deckdiff/issues",
+      "https://api.github.com/repos/JaiiR320/DeckDiff/issues",
       {
         method: "POST",
         headers: {

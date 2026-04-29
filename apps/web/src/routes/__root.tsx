@@ -25,7 +25,7 @@ export const Route = createRootRoute({
         content: "width=device-width, initial-scale=1",
       },
       {
-        title: "deckdiff",
+        title: "DeckDiff",
       },
     ],
     links: [
@@ -88,7 +88,7 @@ function AppHeader() {
       <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-4 sm:px-8">
         <div className="flex items-center gap-6">
           <p className="text-sm font-medium uppercase tracking-[0.3em] text-cyan-300">
-            deckdiff
+            DeckDiff
           </p>
 
           {!isAuthPage && session ? (
