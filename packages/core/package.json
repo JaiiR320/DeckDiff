@@ -6,8 +6,8 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsgo -p tsconfig.json",
-    "check": "tsgo -p tsconfig.json --noEmit"
+    "build": "tsgo -b",
+    "check": "tsgo -b"
   },
   "dependencies": {
     "@deckdiff/schemas": "workspace:*"
