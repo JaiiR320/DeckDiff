@@ -9,6 +9,10 @@ import { GameNotFoundError, GameStore } from "./gameStore.js";
 
 const createGameRequestSchema = z.object({
   name: z.string().min(1),
+  player: z.object({
+    id: z.string().min(1),
+    name: z.string().min(1),
+  }),
 });
 
 export function createApp(store = new GameStore(), bus = new EventBus()): Hono {
@@ -20,8 +24,10 @@ export function createApp(store = new GameStore(), bus = new EventBus()): Hono {
 
   app.post("/games", async (c) => {
     const request = createGameRequestSchema.parse(await c.req.json());
-    return c.json(store.create(request.name), 201);
+    return c.json(store.create(request.name, request.player), 201);
   });
+
+  app.get("/games", (c) => c.json({ games: store.list() }));
 
   app.get("/games/:gameId", (c) => c.json(store.get(c.req.param("gameId"))));
 

@@ -78,6 +78,7 @@ function AppHeader() {
 
   const isAuthPage = location.pathname === "/auth";
   const isDecksPage = location.pathname === "/decks";
+  const isPlayPage = location.pathname === "/play" || location.pathname.startsWith("/game/");
   const isJudgePage = location.pathname === "/judge";
   const username = session?.user.email.split("@")[0] ?? "";
   const navLinkClass =
@@ -100,6 +101,16 @@ function AppHeader() {
                 }`}
               >
                 Decks
+              </Link>
+              <Link
+                to="/play"
+                className={`${navLinkClass} ${
+                  isPlayPage
+                    ? "border-cyan-800 bg-cyan-950/40 text-cyan-200"
+                    : "border-zinc-800 text-zinc-300 hover:border-zinc-700 hover:bg-zinc-900"
+                }`}
+              >
+                Play
               </Link>
               <Link
                 to="/judge"

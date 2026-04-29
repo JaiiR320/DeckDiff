@@ -4,7 +4,7 @@ import { createApp } from "./app.js";
 async function createGame(app: ReturnType<typeof createApp>, name = "Test Game") {
   const response = await app.request("/games", {
     method: "POST",
-    body: JSON.stringify({ name }),
+    body: JSON.stringify({ name, player: { id: "user_1", name: "Jair" } }),
     headers: { "content-type": "application/json" },
   });
   return response;
@@ -20,7 +20,7 @@ describe("api", () => {
     expect(await response.json()).toEqual({ ok: true });
   });
 
-  it("creates named empty games", async () => {
+  it("creates named games with the creator as a player", async () => {
     const app = createApp();
 
     const created = await createGame(app, "Friday Commander");
@@ -32,7 +32,32 @@ describe("api", () => {
     expect(body.game.createdAt).toEqual(expect.any(String));
     expect(body.game.updatedAt).toEqual(expect.any(String));
     expect(body.view.viewMode).toBe("debug");
-    expect(body.view.players).toEqual([]);
+    expect(body.view.players).toHaveLength(1);
+    expect(body.view.players[0]).toMatchObject({
+      id: "user_1",
+      name: "Jair",
+      life: 40,
+    });
+    expect(body.view.players[0].zones.library.objects).toEqual([]);
+    expect(body.view.players[0].zones.hand.objects).toEqual([]);
+    expect(body.view.players[0].zones.graveyard.objects).toEqual([]);
+    expect(body.view.zones.battlefield.objects).toEqual([]);
+  });
+
+  it("lists games", async () => {
+    const app = createApp();
+    await createGame(app, "First");
+    await createGame(app, "Second");
+
+    const response = await app.request("/games");
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.games).toHaveLength(2);
+    expect(body.games.map((entry: { game: { name: string } }) => entry.game.name)).toContain(
+      "First",
+    );
+    expect(body.games[0].view.players[0]).toMatchObject({ id: "user_1", name: "Jair" });
   });
 
   it("returns created games by id", async () => {
@@ -72,7 +97,9 @@ describe("api", () => {
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.game.id).toBe(created.game.id);
-    expect(body.view.players[0]).toMatchObject({
+    expect(
+      body.view.players.find((player: { id: string }) => player.id === "player_austin"),
+    ).toMatchObject({
       id: "player_austin",
       name: "Austin",
       life: 0,

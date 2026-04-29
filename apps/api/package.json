@@ -8,7 +8,7 @@
   "scripts": {
     "build": "tsgo -b",
     "check": "tsgo -b",
-    "dev": "tsx watch src/server.ts",
+    "dev": "PORT=3001 tsx watch src/server.ts",
     "start": "node dist/server.js"
   },
   "dependencies": {

@@ -1,5 +1,11 @@
 import { applyCommand, createGame, createId, toGameView } from "@deckdiff/core";
-import type { GameCommand, GameEvent, GameState, GameView } from "@deckdiff/schemas";
+import type {
+  GameCommand,
+  GameEvent,
+  GameState,
+  GameView,
+  NewGameRequest,
+} from "@deckdiff/schemas";
 
 export type GameMetadata = {
   id: string;
@@ -31,17 +37,23 @@ export class GameNotFoundError extends Error {
 export class GameStore {
   private games = new Map<string, GameRecord>();
 
-  create(name: string): GameResponse {
+  create(name: string, player: NewGameRequest["players"][number]): GameResponse {
     const now = new Date().toISOString();
     const record: GameRecord = {
       id: createId("game"),
       name,
       createdAt: now,
       updatedAt: now,
-      state: createGame({ players: [] }),
+      state: createGame({ players: [player] }),
     };
     this.games.set(record.id, record);
     return this.toResponse(record);
+  }
+
+  list(): GameResponse[] {
+    return [...this.games.values()]
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+      .map((record) => this.toResponse(record));
   }
 
   get(gameId: string): GameResponse {
