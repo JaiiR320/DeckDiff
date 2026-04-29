@@ -1,0 +1,24 @@
+{
+  "name": "@deckdiff/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/apps/api/src/server.js",
+  "types": "dist/apps/api/src/server.d.ts",
+  "scripts": {
+    "build": "pnpm --filter @deckdiff/schemas build && pnpm --filter @deckdiff/core build && tsc -p tsconfig.json",
+    "check": "tsc -p tsconfig.json --noEmit",
+    "dev": "tsx watch src/server.ts",
+    "start": "node dist/apps/api/src/server.js"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.14.1",
+    "@deckdiff/core": "workspace:*",
+    "@deckdiff/schemas": "workspace:*",
+    "hono": "^4.7.7",
+    "zod": "^3.24.3"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.4"
+  }
+}

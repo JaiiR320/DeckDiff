@@ -1,0 +1,15 @@
+{
+  "name": "@deckdiff/core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/core/src/index.js",
+  "types": "dist/core/src/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "check": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@deckdiff/schemas": "workspace:*"
+  }
+}
