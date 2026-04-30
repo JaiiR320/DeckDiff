@@ -1,89 +1,59 @@
 import { DragDropProvider, type DragEndEvent, type DragMoveEvent } from "@dnd-kit/react";
 import { Feedback } from "@dnd-kit/dom";
-import { applyCommand, createGame } from "@deckdiff/core";
+import { createGame } from "@deckdiff/core";
 import { useHotkey } from "@tanstack/react-hotkeys";
-import { useCallback, useMemo, useState } from "react";
-import type { PointerEvent } from "react";
-import type { GameObject, GameState, ZoneRef } from "@deckdiff/schemas";
+import { useCallback, useEffect, useState } from "react";
+import type { GameState } from "@deckdiff/schemas";
 import { BattlefieldCard } from "./components/BattlefieldCard.js";
 import { Card } from "./components/Card.js";
 import { DropZone } from "./components/DropZone.js";
 import { HandZone } from "./components/HandZone.js";
 import { PileZone } from "./components/PileZone.js";
 import { SelectionMarquee } from "./components/SelectionMarquee.js";
-import type { CardPosition, DropTarget, Rectangle, SelectionBox, SimZone } from "./sim.js";
-import { cardTargetPrefix, toRectangle } from "./sim.js";
+import type { CardPosition, DropTarget } from "./sim/types.js";
+import { parseCardTargetId, parseDropTarget } from "./sim/targets.js";
+import { snapPosition } from "./sim/geometry.js";
+import {
+  findObjectLocation,
+  isPlayerZone,
+  sameTarget,
+  topCard,
+  zoneObjects,
+} from "./sim/gameQueries.js";
+import {
+  actionObjectIds,
+  canMoveObjectToTarget,
+  moveObjects,
+  reorderZoneBefore,
+  toggleFaceDown,
+  toggleFlipped,
+  toggleTapped,
+} from "./sim/actions.js";
+import { cardImageCacheKey, getCardImage, type SimCardImage } from "./sim/cardImages.js";
+import { useBattlefieldLayout } from "./hooks/useBattlefieldLayout.js";
+import { useSelectionMarquee } from "./hooks/useSelectionMarquee.js";
 import { useSimUiStore } from "./simUiStore.js";
-
-type PositionMap = Record<string, CardPosition>;
-
-type ObjectLocation = {
-  object: GameObject;
-  zone: DropTarget;
-};
-
-const gridSize = 24;
-const cardWidth = 120;
-const cardHeight = 168;
-const zoneTrayHeight = 252;
-const battlefieldPadding = 8;
 
 const pileZones = ["library", "graveyard", "exile", "command"] as const;
 
-function snap(value: number): number {
-  return Math.round(value / gridSize) * gridSize;
-}
+type CardImagesByName = Record<string, SimCardImage | null>;
 
-function snapPosition(position: CardPosition): CardPosition {
-  return { x: snap(position.x), y: snap(position.y) };
-}
-
-function isWithinBattlefield(position: CardPosition): boolean {
-  return (
-    position.x >= battlefieldPadding &&
-    position.y >= battlefieldPadding &&
-    position.x + cardWidth <= window.innerWidth - battlefieldPadding &&
-    position.y + cardHeight <= window.innerHeight - zoneTrayHeight - battlefieldPadding
-  );
-}
-
-function cardRectangle(position: CardPosition): Rectangle {
-  return {
-    left: position.x,
-    top: position.y,
-    right: position.x + cardWidth,
-    bottom: position.y + cardHeight,
-  };
-}
-
-function intersects(a: Rectangle, b: Rectangle): boolean {
-  return a.left <= b.right && a.right >= b.left && a.top <= b.bottom && a.bottom >= b.top;
-}
-
-function getActionObjectIds({
-  selectedObjectIds,
-  hoveredObjectId,
-  fallbackObjectId,
-}: {
-  selectedObjectIds: string[];
-  hoveredObjectId: string | null;
-  fallbackObjectId?: string;
-}): string[] {
-  if (selectedObjectIds.length > 0) return selectedObjectIds;
-  if (fallbackObjectId) return [fallbackObjectId];
-  if (hoveredObjectId) return [hoveredObjectId];
-  return [];
-}
-
+/** Creates the local seed game until server state exists. */
 function createSeedGame(): GameState {
   return createGame({
     players: [
       {
         id: "p1",
         name: "Player",
-        library: ["Brainstorm", "Ponder", "Counterspell", "Island"],
-        hand: ["Swords to Plowshares", "Mystic Remora", "Arcane Signet"],
-        battlefield: [
+        library: [
+          "Brainstorm",
+          "Ponder",
+          "Counterspell",
+          "Island",
+          "Swords to Plowshares",
+          "Mystic Remora",
+          "Arcane Signet",
+          "Malakir Rebirth",
           "Sol Ring",
           "Island",
           "Command Tower",
@@ -91,135 +61,114 @@ function createSeedGame(): GameState {
           "Lightning Greaves",
           "Rhystic Study",
         ],
-        graveyard: ["Opt"],
-        exile: ["Path to Exile"],
-        command: ["Atraxa, Praetors' Voice"],
+        hand: [],
+        battlefield: [],
+        graveyard: [],
+        exile: [],
+        command: [],
       },
     ],
   });
 }
 
-function defaultPositions(objects: GameObject[]): PositionMap {
-  return Object.fromEntries(
-    objects.map((object, index) => [
-      object.objectId,
-      {
-        x: 56 + (index % 4) * 164,
-        y: 72 + Math.floor(index / 4) * 224,
-      },
-    ]),
-  );
-}
-
-function parseCardTargetId(targetId: unknown): string | null {
-  if (typeof targetId !== "string" || !targetId.startsWith(cardTargetPrefix)) return null;
-  return targetId.slice(cardTargetPrefix.length);
-}
-
-function parseDropTarget(targetId: unknown, playerId: string): DropTarget | null {
-  if (typeof targetId !== "string" || !targetId.startsWith("zone:")) return null;
-  const zone = targetId.slice("zone:".length) as SimZone;
-  if (zone === "hand" || zone === "library" || zone === "graveyard") return { zone, playerId };
-  if (zone === "battlefield" || zone === "exile" || zone === "command" || zone === "stack") {
-    return { zone };
-  }
-  return null;
-}
-
-function toZoneRef(target: DropTarget): ZoneRef {
-  return target.playerId ? { zone: target.zone, playerId: target.playerId } : { zone: target.zone };
-}
-
-function sameTarget(a: DropTarget, b: DropTarget): boolean {
-  return a.zone === b.zone && a.playerId === b.playerId;
-}
-
-function findObject(state: GameState, objectId: string): ObjectLocation | null {
-  for (const player of state.players) {
-    for (const zone of ["library", "hand", "graveyard"] as const) {
-      const object = player.zones[zone].objects.find(
-        (candidate) => candidate.objectId === objectId,
-      );
-      if (object) return { object, zone: { zone, playerId: player.id } };
-    }
-  }
-
-  for (const zone of ["battlefield", "exile", "command", "stack"] as const) {
-    const object = state.zones[zone].objects.find((candidate) => candidate.objectId === objectId);
-    if (object) return { object, zone: { zone } };
-  }
-
-  return null;
-}
-
-function zoneObjects(state: GameState, playerId: string, zone: SimZone): GameObject[] {
-  if (zone === "library" || zone === "hand" || zone === "graveyard") {
-    return state.players.find((player) => player.id === playerId)?.zones[zone].objects ?? [];
-  }
-
-  return state.zones[zone].objects;
-}
-
-function topCard(objects: GameObject[]): GameObject | undefined {
-  return objects.at(-1);
-}
-
+/** Reads the battlefield element bounds for drop math. */
 function getBattlefieldRect(): DOMRect | undefined {
   return document.querySelector<HTMLElement>(".battlefield")?.getBoundingClientRect();
 }
 
-function moveIdsBefore(ids: string[], movedIds: string[], targetId: string): string[] {
-  const movedIdSet = new Set(movedIds);
-  if (movedIdSet.has(targetId)) return ids;
-
-  const remainingIds = ids.filter((id) => !movedIdSet.has(id));
-  const targetIndex = remainingIds.indexOf(targetId);
-  if (targetIndex < 0) return ids;
-
+function gameCardNames(game: GameState) {
   return [
-    ...remainingIds.slice(0, targetIndex),
-    ...ids.filter((id) => movedIdSet.has(id)),
-    ...remainingIds.slice(targetIndex),
-  ];
+    ...game.players.flatMap((player) => [
+      ...player.zones.library.objects,
+      ...player.zones.hand.objects,
+      ...player.zones.graveyard.objects,
+    ]),
+    ...game.zones.battlefield.objects,
+    ...game.zones.stack.objects,
+    ...game.zones.exile.objects,
+    ...game.zones.command.objects,
+  ].map((object) => object.name);
 }
 
 export function App() {
   const [game, setGame] = useState(createSeedGame);
+  const [cardImagesByName, setCardImagesByName] = useState<CardImagesByName>({});
   const player = game.players[0]!;
   const battlefieldObjects = game.zones.battlefield.objects;
-  const [positions, setPositions] = useState(() => defaultPositions(battlefieldObjects));
-  const [cardOrder] = useState(() => battlefieldObjects.map((object) => object.objectId));
-  const [selectionBox, setSelectionBox] = useState<SelectionBox | null>(null);
-  const zIndexByObjectId = useMemo(
-    () => new Map(cardOrder.map((objectId, index) => [objectId, index + 1])),
-    [cardOrder],
-  );
+  const layout = useBattlefieldLayout(battlefieldObjects);
+  const { selectionBox, battlefieldPointerHandlers } = useSelectionMarquee({
+    objects: battlefieldObjects,
+    positions: layout.positions,
+  });
 
+  useEffect(() => {
+    const uniqueNames = [...new Set(gameCardNames(game))];
+    const missingNames = uniqueNames.filter(
+      (name) => !Object.hasOwn(cardImagesByName, cardImageCacheKey(name)),
+    );
+    if (missingNames.length === 0) return;
+
+    let cancelled = false;
+    void Promise.all(
+      missingNames.map(
+        async (name) => [cardImageCacheKey(name), await getCardImage(name)] as const,
+      ),
+    ).then((entries) => {
+      if (cancelled) return;
+      setCardImagesByName((current) => ({ ...current, ...Object.fromEntries(entries) }));
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [cardImagesByName, game]);
+
+  /** Toggles tapped for the current action cards. */
   const toggleActionCardsTapped = useCallback((fallbackObjectId?: string) => {
     const { selectedObjectIds, hoveredObjectId } = useSimUiStore.getState();
-    const objectIds = getActionObjectIds({
+    const objectIds = actionObjectIds({
       selectedObjectIds,
       hoveredObjectId,
       fallbackObjectId,
     });
 
-    setGame((currentGame) => {
-      let nextGame = currentGame;
-
-      for (const objectId of objectIds) {
-        const found = findObject(nextGame, objectId);
-        if (!found || found.zone.zone !== "battlefield") continue;
-
-        nextGame = applyCommand(nextGame, {
-          type: "object.setStatus",
-          objectId,
-          status: { tapped: !found.object.status.tapped },
-        }).state;
-      }
-
-      return nextGame;
-    });
+    setGame((currentGame) => toggleTapped(currentGame, objectIds));
   }, []);
+
+  /** Toggles face-down state for the current action cards. */
+  const toggleActionCardsFaceDown = useCallback((fallbackObjectId?: string) => {
+    const { selectedObjectIds, hoveredObjectId } = useSimUiStore.getState();
+    const objectIds = actionObjectIds({
+      selectedObjectIds,
+      hoveredObjectId,
+      fallbackObjectId,
+    });
+
+    setGame((currentGame) => toggleFaceDown(currentGame, objectIds));
+  }, []);
+
+  /** Toggles alternate printed face for current double-faced action cards. */
+  const toggleActionCardsAlternateFace = useCallback(
+    (fallbackObjectId?: string) => {
+      const { selectedObjectIds, hoveredObjectId } = useSimUiStore.getState();
+      const objectIds = actionObjectIds({
+        selectedObjectIds,
+        hoveredObjectId,
+        fallbackObjectId,
+      });
+
+      setGame((currentGame) => {
+        const doubleFacedObjectIds = objectIds.filter((objectId) => {
+          const found = findObjectLocation(currentGame, objectId);
+          if (!found) return false;
+          return cardImagesByName[cardImageCacheKey(found.object.name)]?.hasAlternateFace ?? false;
+        });
+
+        return toggleFlipped(currentGame, doubleFacedObjectIds);
+      });
+    },
+    [cardImagesByName],
+  );
 
   useHotkey(
     "T",
@@ -230,28 +179,32 @@ export function App() {
     { preventDefault: true },
   );
 
+  useHotkey(
+    "F",
+    () => {
+      if (useSimUiStore.getState().draggedObjectId !== null) return;
+      toggleActionCardsFaceDown();
+    },
+    { preventDefault: true },
+  );
+
+  useHotkey(
+    "Z",
+    () => {
+      if (useSimUiStore.getState().draggedObjectId !== null) return;
+      toggleActionCardsAlternateFace();
+    },
+    { preventDefault: true },
+  );
+
+  /** Moves a card or selected group within the battlefield. */
   function handleBattlefieldMove(objectId: string, delta: CardPosition) {
     const { selectedObjectIds } = useSimUiStore.getState();
-    setPositions((currentPositions) => {
-      const movedObjectIds = selectedObjectIds.includes(objectId) ? selectedObjectIds : [objectId];
-      const nextPositions = Object.fromEntries(
-        movedObjectIds.map((movedObjectId) => {
-          const current = currentPositions[movedObjectId] ?? { x: 0, y: 0 };
-          return [movedObjectId, snapPosition({ x: current.x + delta.x, y: current.y + delta.y })];
-        }),
-      ) as PositionMap;
-
-      if (Object.values(nextPositions).some((position) => !isWithinBattlefield(position))) {
-        return currentPositions;
-      }
-
-      return {
-        ...currentPositions,
-        ...nextPositions,
-      };
-    });
+    const movedObjectIds = selectedObjectIds.includes(objectId) ? selectedObjectIds : [objectId];
+    layout.moveBattlefieldObjects(movedObjectIds, delta);
   }
 
+  /** Reorders cards within a player's hand. */
   function handleHandReorder(objectId: string, targetObjectId: string, playerId: string) {
     const { selectedObjectIds } = useSimUiStore.getState();
     const handObjectIds = player.zones.hand.objects.map((object) => object.objectId);
@@ -260,18 +213,12 @@ export function App() {
       : [objectId];
     if (movedObjectIds.length === 0) return;
 
-    const nextObjectIds = moveIdsBefore(handObjectIds, movedObjectIds, targetObjectId);
-    if (nextObjectIds === handObjectIds) return;
-
-    setGame(
-      applyCommand(game, {
-        type: "zone.reorder",
-        zone: { zone: "hand", playerId },
-        objectIds: nextObjectIds,
-      }).state,
+    setGame((currentGame) =>
+      reorderZoneBefore(currentGame, { zone: "hand", playerId }, movedObjectIds, targetObjectId),
     );
   }
 
+  /** Moves a card or selected group to a new zone. */
   function handleZoneMove(
     objectId: string,
     target: DropTarget,
@@ -281,27 +228,16 @@ export function App() {
     const { selectedObjectIds, setHoveredObjectId, setSelectedObjectIds } =
       useSimUiStore.getState();
     const movedObjectIds = selectedObjectIds.includes(objectId) ? selectedObjectIds : [objectId];
+    const legalMovedObjectIds = movedObjectIds.filter((movedObjectId) =>
+      canMoveObjectToTarget(game, movedObjectId, target, player.id),
+    );
+    if (legalMovedObjectIds.length === 0) return;
+
     if (target.zone === "battlefield") {
-      const nextPositions = movedObjectIds.map((_, index) =>
-        snapPosition({
-          x: dropPosition.x + index * gridSize,
-          y: dropPosition.y + index * gridSize,
-        }),
-      );
-      if (nextPositions.some((position) => !isWithinBattlefield(position))) return;
+      if (!layout.canPlaceOnBattlefield(dropPosition, legalMovedObjectIds.length)) return;
     }
 
-    let nextGame = game;
-
-    for (const [index, movedObjectId] of movedObjectIds.entries()) {
-      if (!findObject(nextGame, movedObjectId)) continue;
-      nextGame = applyCommand(nextGame, {
-        type: "object.move",
-        objectId: movedObjectId,
-        to: toZoneRef(target),
-        insertIndex: insertIndex === undefined ? undefined : insertIndex + index,
-      }).state;
-    }
+    const nextGame = moveObjects(game, legalMovedObjectIds, target, player.id, insertIndex);
 
     setGame(nextGame);
 
@@ -309,30 +245,18 @@ export function App() {
     setHoveredObjectId(null);
 
     if (target.zone !== "battlefield") {
-      setPositions((currentPositions) => {
-        const nextPositions = { ...currentPositions };
-        for (const movedObjectId of movedObjectIds) delete nextPositions[movedObjectId];
-        return nextPositions;
-      });
+      layout.removeObjects(legalMovedObjectIds);
       return;
     }
 
-    setPositions((currentPositions) => {
-      const nextPositions = { ...currentPositions };
-      const missingObjects = nextGame.zones.battlefield.objects.filter(
-        (object) => nextPositions[object.objectId] === undefined,
-      );
-      for (const movedObjectId of movedObjectIds) delete nextPositions[movedObjectId];
-      missingObjects.forEach((object, index) => {
-        nextPositions[object.objectId] = snapPosition({
-          x: dropPosition.x + index * gridSize,
-          y: dropPosition.y + index * gridSize,
-        });
-      });
-      return nextPositions;
-    });
+    layout.syncAfterBattlefieldEntry(
+      legalMovedObjectIds,
+      nextGame.zones.battlefield.objects,
+      dropPosition,
+    );
   }
 
+  /** Routes a completed drag to move, reorder, or cancel behavior. */
   function handleDragEnd(event: DragEndEvent) {
     const objectId = event.operation.source?.id;
     if (event.canceled || typeof objectId !== "string") {
@@ -340,7 +264,7 @@ export function App() {
       return;
     }
 
-    const found = findObject(game, objectId);
+    const found = findObjectLocation(game, objectId);
     if (!found) {
       clearDragState();
       return;
@@ -367,7 +291,7 @@ export function App() {
     const targetObjectId = parseCardTargetId(event.operation.target?.id);
 
     if (targetObjectId) {
-      const targetFound = findObject(game, targetObjectId);
+      const targetFound = findObjectLocation(game, targetObjectId);
       if (targetFound?.zone.zone === "hand" && targetFound.zone.playerId) {
         const targetIndex = player.zones.hand.objects.findIndex(
           (object) => object.objectId === targetObjectId,
@@ -412,10 +336,12 @@ export function App() {
     clearDragState();
   }
 
+  /** Clears transient drag state after drag completion. */
   function clearDragState() {
     useSimUiStore.getState().clearDrag();
   }
 
+  /** Tracks group drag offset while a selected card moves. */
   function handleDragMove(event: DragMoveEvent) {
     const objectId = event.operation.source?.id;
     const { selectedObjectIds, setDragOffset } = useSimUiStore.getState();
@@ -428,53 +354,6 @@ export function App() {
     }
 
     setDragOffset(event.operation.transform);
-  }
-
-  function getBattlefieldPoint(event: PointerEvent<HTMLElement>): CardPosition {
-    const rect = event.currentTarget.getBoundingClientRect();
-    return {
-      x: event.clientX - rect.left,
-      y: event.clientY - rect.top,
-    };
-  }
-
-  function handleBattlefieldPointerDown(event: PointerEvent<HTMLElement>) {
-    if (event.button !== 0 || !event.isPrimary || event.target !== event.currentTarget) return;
-
-    const point = getBattlefieldPoint(event);
-    event.currentTarget.setPointerCapture(event.pointerId);
-    setSelectionBox({ start: point, current: point });
-  }
-
-  function handleBattlefieldPointerMove(event: PointerEvent<HTMLElement>) {
-    if (!selectionBox) return;
-
-    const point = getBattlefieldPoint(event);
-
-    setSelectionBox((currentBox) => (currentBox ? { ...currentBox, current: point } : null));
-  }
-
-  function handleBattlefieldPointerUp(event: PointerEvent<HTMLElement>) {
-    if (!selectionBox) return;
-
-    const box = toRectangle(selectionBox);
-    event.currentTarget.releasePointerCapture(event.pointerId);
-    setSelectionBox(null);
-
-    if (box.right - box.left < 4 && box.bottom - box.top < 4) {
-      useSimUiStore.getState().clearSelection();
-      return;
-    }
-
-    useSimUiStore
-      .getState()
-      .setSelectedObjectIds(
-        battlefieldObjects
-          .filter((object) =>
-            intersects(box, cardRectangle(positions[object.objectId] ?? { x: 24, y: 24 })),
-          )
-          .map((object) => object.objectId),
-      );
   }
 
   return (
@@ -495,18 +374,16 @@ export function App() {
         <DropZone
           target={{ zone: "battlefield" }}
           className="battlefield"
-          onPointerDown={handleBattlefieldPointerDown}
-          onPointerMove={handleBattlefieldPointerMove}
-          onPointerUp={handleBattlefieldPointerUp}
-          onPointerCancel={handleBattlefieldPointerUp}
+          {...battlefieldPointerHandlers}
         >
           {selectionBox ? <SelectionMarquee box={selectionBox} /> : null}
           {battlefieldObjects.map((object) => (
             <BattlefieldCard
               key={object.objectId}
               object={object}
-              position={positions[object.objectId] ?? { x: 24, y: 24 }}
-              zIndex={zIndexByObjectId.get(object.objectId) ?? 1}
+              image={cardImagesByName[cardImageCacheKey(object.name)]}
+              position={layout.positions[object.objectId] ?? { x: 24, y: 24 }}
+              zIndex={layout.zIndexByObjectId.get(object.objectId) ?? 1}
               onToggleTapped={toggleActionCardsTapped}
             />
           ))}
@@ -521,15 +398,17 @@ export function App() {
               <Card
                 key={object.objectId}
                 object={object}
+                image={cardImagesByName[cardImageCacheKey(object.name)]}
                 onToggleTapped={toggleActionCardsTapped}
               />
             ))}
           </HandZone>
 
           {pileZones.map((zone) => {
-            const target: DropTarget =
-              zone === "library" || zone === "graveyard" ? { zone, playerId: player.id } : { zone };
-            const objects = zoneObjects(game, player.id, zone);
+            const target: DropTarget = isPlayerZone(zone)
+              ? { zone, playerId: player.id }
+              : { zone };
+            const objects = zoneObjects(game, target);
             const topObject = topCard(objects);
 
             return (
@@ -538,6 +417,7 @@ export function App() {
                   <Card
                     key={topObject.objectId}
                     object={topObject}
+                    image={cardImagesByName[cardImageCacheKey(topObject.name)]}
                     isFaceDown={zone === "library"}
                     onToggleTapped={toggleActionCardsTapped}
                   />

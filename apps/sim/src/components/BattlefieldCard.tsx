@@ -2,6 +2,7 @@ import { memo } from "react";
 import type { CSSProperties } from "react";
 import type { GameObject } from "@deckdiff/schemas";
 import type { CardPosition } from "../sim.js";
+import type { SimCardImage } from "../sim/cardImages.js";
 import { useSimUiStore } from "../simUiStore.js";
 import { Card } from "./Card.js";
 
@@ -9,11 +10,13 @@ const zeroPosition = { x: 0, y: 0 };
 
 export const BattlefieldCard = memo(function BattlefieldCard({
   object,
+  image,
   position,
   zIndex,
   onToggleTapped,
 }: {
   object: GameObject;
+  image?: SimCardImage | null;
   position: CardPosition;
   zIndex: number;
   onToggleTapped: (objectId: string) => void;
@@ -47,7 +50,7 @@ export const BattlefieldCard = memo(function BattlefieldCard({
 
   return (
     <div className="battlefield-card" style={style}>
-      <Card object={object} onToggleTapped={onToggleTapped} />
+      <Card object={object} image={image} onToggleTapped={onToggleTapped} />
     </div>
   );
 });

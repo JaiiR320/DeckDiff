@@ -2,15 +2,19 @@ import { useDraggable, useDroppable } from "@dnd-kit/react";
 import { memo, useCallback, useRef } from "react";
 import type { MouseEvent, PointerEvent } from "react";
 import type { GameObject } from "@deckdiff/schemas";
+import cardBackUrl from "../assets/CardBack.png";
 import { cardTargetId, doubleClickMs } from "../sim.js";
+import type { SimCardImage } from "../sim/cardImages.js";
 import { useSimUiStore } from "../simUiStore.js";
 
 export const Card = memo(function Card({
   object,
+  image,
   isFaceDown = false,
   onToggleTapped,
 }: {
   object: GameObject;
+  image?: SimCardImage | null;
   isFaceDown?: boolean;
   onToggleTapped: (objectId: string) => void;
 }) {
@@ -55,6 +59,9 @@ export const Card = memo(function Card({
     event.stopPropagation();
   }
 
+  const showCardBack = isFaceDown || object.status.faceDown;
+  const imageUrl = object.status.flipped ? image?.alternateImageUrl : image?.frontImageUrl;
+
   return (
     <div
       ref={setCardElement}
@@ -76,13 +83,21 @@ export const Card = memo(function Card({
         className={[
           "card",
           object.status.tapped ? "card-tapped" : "",
-          isFaceDown ? "card-face-down" : "",
+          showCardBack ? "card-face-down" : "",
+          imageUrl && !showCardBack ? "card-with-image" : "",
         ]
           .filter(Boolean)
           .join(" ")}
       >
-        {isFaceDown ? (
-          <span className="card-name">Library</span>
+        {showCardBack ? (
+          <img
+            className="card-image card-back-image"
+            src={cardBackUrl}
+            alt="Magic card back"
+            draggable={false}
+          />
+        ) : imageUrl ? (
+          <img className="card-image" src={imageUrl} alt={object.name} draggable={false} />
         ) : (
           <>
             <span className="card-type">Permanent</span>

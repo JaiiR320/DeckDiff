@@ -5,15 +5,16 @@ import { DropZone } from "./DropZone.js";
 
 const cardWidth = 120;
 const cardAreaPadding = 4;
+const naturalCardGap = 12;
 
 function handCardLeft(index: number, count: number, width: number): number {
   const availableWidth = Math.max(0, width - cardAreaPadding * 2);
   const maxLeft = Math.max(0, availableWidth - cardWidth);
   if (count <= 1) return cardAreaPadding + maxLeft / 2;
 
-  const naturalSpan = (count - 1) * cardWidth;
+  const naturalSpan = (count - 1) * (cardWidth + naturalCardGap);
   if (naturalSpan <= maxLeft)
-    return cardAreaPadding + (maxLeft - naturalSpan) / 2 + index * cardWidth;
+    return cardAreaPadding + (maxLeft - naturalSpan) / 2 + index * (cardWidth + naturalCardGap);
 
   return cardAreaPadding + (index * maxLeft) / (count - 1);
 }

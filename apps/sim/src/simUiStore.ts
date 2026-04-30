@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { CardPosition } from "./sim.js";
+import type { CardPosition } from "./sim/types.js";
 
 type SimUiStore = {
   hoveredObjectId: string | null;
