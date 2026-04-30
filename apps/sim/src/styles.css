@@ -46,7 +46,7 @@ body {
   position: absolute;
   inset: 0 0 252px 0;
   overflow: hidden;
-  background-color: #10251b;
+  background-color: #09090b;
   background-image:
     linear-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
@@ -92,7 +92,7 @@ body {
   flex-direction: column;
   gap: 8px;
   justify-content: flex-start;
-  border: 1px solid rgba(63, 63, 70, 0.9);
+  border: 1px solid rgba(103, 232, 249, 0.42);
   border-radius: 12px;
   background: rgba(9, 9, 11, 0.54);
   padding: 10px;
