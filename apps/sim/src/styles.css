@@ -13,8 +13,8 @@ body,
 body {
   margin: 0;
   font-family:
-    "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
-    "Courier New", monospace;
+    "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
   color: #f4f4f5;
   background: #09090b;
   -webkit-font-smoothing: antialiased;
@@ -74,7 +74,7 @@ body {
 
 .hand-cards {
   position: relative;
-  height: 184px;
+  height: 168px;
   overflow: visible;
 }
 
