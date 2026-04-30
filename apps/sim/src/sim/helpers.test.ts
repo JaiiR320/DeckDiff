@@ -5,9 +5,17 @@ import {
   moveIdsBefore,
   toggleFaceDown,
   toggleFlipped,
+  toggleRevealedToAll,
   toggleTapped,
 } from "./actions.js";
-import { findObjectLocation, toZoneRef, zoneObjects } from "./gameQueries.js";
+import {
+  canPreviewObject,
+  findObjectLocation,
+  isLibraryTopObject,
+  isObjectRevealed,
+  toZoneRef,
+  zoneObjects,
+} from "./gameQueries.js";
 import { intersects, isWithinBattlefield, snapPosition } from "./geometry.js";
 import { parseDropTarget, zoneTargetId } from "./targets.js";
 
@@ -108,6 +116,44 @@ describe("sim helpers", () => {
 
     const unflipped = toggleFlipped(flipped, [object.objectId]);
     expect(unflipped.zones.battlefield.objects[0]!.status.flipped).toBe(false);
+  });
+
+  it("toggles public reveal on objects", () => {
+    const game = createGame({ players: [{ id: "p1", name: "Player", library: ["Opt"] }] });
+    const object = game.players[0]!.zones.library.objects[0]!;
+
+    const revealed = toggleRevealedToAll(game, object.objectId);
+    expect(revealed.players[0]!.zones.library.objects[0]!.visibility).toEqual({
+      revealedTo: "all",
+    });
+    expect(isObjectRevealed(revealed.players[0]!.zones.library.objects[0]!, "p1")).toBe(true);
+
+    const hidden = toggleRevealedToAll(revealed, object.objectId);
+    expect(hidden.players[0]!.zones.library.objects[0]!.visibility).toBeUndefined();
+  });
+
+  it("checks preview visibility for library and face-down cards", () => {
+    let game = createGame({
+      players: [
+        { id: "p1", name: "One", library: ["Opt", "Island"], battlefield: ["Island"] },
+        { id: "p2", name: "Two", battlefield: ["Swamp"] },
+      ],
+    });
+    const libraryObject = game.players[0]!.zones.library.objects[0]!;
+    const secondLibraryObject = game.players[0]!.zones.library.objects[1]!;
+    const controlledObject = game.zones.battlefield.objects[0]!;
+    const opponentObject = game.zones.battlefield.objects[1]!;
+
+    expect(isLibraryTopObject(game, libraryObject.objectId)).toBe(true);
+    expect(isLibraryTopObject(game, secondLibraryObject.objectId)).toBe(false);
+    expect(canPreviewObject(findObjectLocation(game, libraryObject.objectId)!, "p1")).toBe(false);
+
+    game = toggleRevealedToAll(game, libraryObject.objectId);
+    expect(canPreviewObject(findObjectLocation(game, libraryObject.objectId)!, "p1")).toBe(true);
+
+    game = toggleFaceDown(game, [controlledObject.objectId, opponentObject.objectId]);
+    expect(canPreviewObject(findObjectLocation(game, controlledObject.objectId)!, "p1")).toBe(true);
+    expect(canPreviewObject(findObjectLocation(game, opponentObject.objectId)!, "p1")).toBe(false);
   });
 
   it("moves only objects that can legally enter a target", () => {

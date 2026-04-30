@@ -168,6 +168,45 @@ body {
   pointer-events: none;
 }
 
+.card-preview-popup {
+  position: fixed;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  max-width: calc(100vw - 64px);
+  pointer-events: none;
+  transform: translateY(50%);
+}
+
+.card-preview-popup-left {
+  left: 0;
+}
+
+.card-preview-popup-right {
+  right: 0;
+}
+
+.card-preview-image {
+  display: block;
+  width: min(336px, 24vw);
+  max-height: calc(100vh - 48px);
+  border-radius: 16px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6);
+}
+
+.card-preview-image-sideways {
+  width: min(336px, 24vw);
+}
+
+.card-preview-popup-right .card-preview-image-sideways {
+  transform: rotate(90deg) translateY(14%);
+}
+
+.card-preview-popup-left .card-preview-image-sideways {
+  transform: rotate(90deg) translateY(-14%);
+}
+
 .card-tapped {
   border-color: #67e8f9;
   transform: rotate(90deg);

@@ -59,6 +59,10 @@ export const Card = memo(function Card({
     event.stopPropagation();
   }
 
+  function handleHover(event: MouseEvent) {
+    setHoveredObjectId(object.objectId, event.clientX);
+  }
+
   const showCardBack = isFaceDown || object.status.faceDown;
   const imageUrl = object.status.flipped ? image?.alternateImageUrl : image?.frontImageUrl;
 
@@ -74,7 +78,8 @@ export const Card = memo(function Card({
         .join(" ")}
       onPointerDownCapture={handlePointerDownCapture}
       onClick={handleClick}
-      onMouseEnter={() => setHoveredObjectId(object.objectId)}
+      onMouseEnter={handleHover}
+      onMouseMove={handleHover}
       onMouseLeave={() => setHoveredObjectId(null)}
     >
       <div

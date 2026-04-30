@@ -396,7 +396,12 @@ function resetForZoneChange(
     ownerPlayerId: overrides.ownerPlayerId ?? object.ownerPlayerId,
     controllerPlayerId: overrides.controllerPlayerId ?? object.controllerPlayerId,
     counters: structuredClone(overrides.counters ?? []),
-    status: { ...defaultStatus, ...overrides.status },
+    status: {
+      ...defaultStatus,
+      faceDown: object.status.faceDown,
+      flipped: object.status.flipped,
+      ...overrides.status,
+    },
     visibility: overrides.visibility,
   };
 }

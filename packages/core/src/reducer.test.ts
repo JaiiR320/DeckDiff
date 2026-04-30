@@ -249,7 +249,7 @@ describe("virtual table engine", () => {
     expect(game.players[0]?.counters).toEqual([{ type: "poison", amount: 1 }]);
   });
 
-  it("clears counters and status on zone changes", () => {
+  it("clears counters and transient status on zone changes", () => {
     let game = createGame({
       players: [{ id: "p1", name: "Jair", battlefield: ["Bear Cub"] }],
     });
@@ -258,7 +258,7 @@ describe("virtual table engine", () => {
     game = applyCommand(game, {
       type: "object.setStatus",
       objectId: battlefieldObjectId,
-      status: { tapped: true },
+      status: { tapped: true, faceDown: true, flipped: true },
     }).state;
     game = applyCommand(game, {
       type: "object.setCounters",
@@ -275,6 +275,8 @@ describe("virtual table engine", () => {
     expect(graveyardObject.objectId).not.toBe(battlefieldObjectId);
     expect(graveyardObject.counters).toEqual([]);
     expect(graveyardObject.status.tapped).toBe(false);
+    expect(graveyardObject.status.faceDown).toBe(true);
+    expect(graveyardObject.status.flipped).toBe(true);
   });
 
   it("adjusts life and updates turn and priority state", () => {
@@ -476,7 +478,7 @@ describe("virtual table engine", () => {
     game = applyCommand(game, {
       type: "object.setStatus",
       objectId: original.objectId,
-      status: { faceDown: true },
+      status: { tapped: true, faceDown: true, flipped: true },
     }).state;
     game = applyCommand(game, {
       type: "object.setVisibility",
@@ -494,7 +496,9 @@ describe("virtual table engine", () => {
     expect(moved.objectId).not.toBe(original.objectId);
     expect(moved.cardId).toBe(original.cardId);
     expect(moved.counters).toEqual([]);
-    expect(moved.status.faceDown).toBe(false);
+    expect(moved.status.tapped).toBe(false);
+    expect(moved.status.faceDown).toBe(true);
+    expect(moved.status.flipped).toBe(true);
     expect(moved.visibility).toBeUndefined();
   });
 

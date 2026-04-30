@@ -62,7 +62,31 @@ export function zoneObjects(state: GameState, target: DropTarget): GameObject[] 
   return state.zones[target.zone].objects;
 }
 
+/** Returns whether an object has been revealed to a player. */
+export function isObjectRevealed(object: GameObject, playerId: string): boolean {
+  if (!object.visibility) return false;
+  if (object.visibility.revealedTo === "all") return true;
+  return object.visibility.revealedTo.includes(playerId);
+}
+
+/** Returns whether an object is currently the top card of a library. */
+export function isLibraryTopObject(state: GameState, objectId: string): boolean {
+  const found = findObjectLocation(state, objectId);
+  if (found?.zone.zone !== "library" || !found.zone.playerId) return false;
+  return topCard(zoneObjects(state, found.zone))?.objectId === objectId;
+}
+
+/** Checks whether the local actor may see a card preview. */
+export function canPreviewObject(location: ObjectLocation, actorPlayerId: string): boolean {
+  const revealed = isObjectRevealed(location.object, actorPlayerId);
+  if (location.zone.zone === "library") return revealed;
+  if (location.object.status.faceDown) {
+    return revealed || location.object.controllerPlayerId === actorPlayerId;
+  }
+  return true;
+}
+
 /** Returns the visible/top object for a pile zone. */
 export function topCard(objects: GameObject[]): GameObject | undefined {
-  return objects.at(-1);
+  return objects[0];
 }

@@ -1,18 +1,23 @@
 export type SimCardImage = {
   name: string;
+  layout?: string;
   frontImageUrl?: string;
   alternateImageUrl?: string;
   hasAlternateFace: boolean;
+  shouldRotatePreview: boolean;
 };
 
 type ScryfallCard = {
   name: string;
+  layout?: string;
   image_uris?: {
+    large?: string;
     normal?: string;
     small?: string;
   };
   card_faces?: Array<{
     image_uris?: {
+      large?: string;
       normal?: string;
       small?: string;
     };
@@ -32,22 +37,27 @@ export function cardImageCacheKey(name: string) {
   return normalizeCardImageName(name).toLowerCase();
 }
 
-function faceImageUrl(face?: { image_uris?: { normal?: string; small?: string } }) {
-  return face?.image_uris?.normal ?? face?.image_uris?.small;
+function imageUrl(imageUris?: { large?: string; normal?: string; small?: string }) {
+  return imageUris?.large ?? imageUris?.normal ?? imageUris?.small;
+}
+
+function faceImageUrl(face?: { image_uris?: { large?: string; normal?: string; small?: string } }) {
+  return imageUrl(face?.image_uris);
 }
 
 function toSimCardImage(card: ScryfallCard): SimCardImage | null {
-  const frontImageUrl =
-    card.image_uris?.normal ?? card.image_uris?.small ?? faceImageUrl(card.card_faces?.[0]);
+  const frontImageUrl = imageUrl(card.image_uris) ?? faceImageUrl(card.card_faces?.[0]);
   const alternateImageUrl = faceImageUrl(card.card_faces?.[1]);
 
   if (!frontImageUrl && !alternateImageUrl) return null;
 
   return {
     name: card.name,
+    layout: card.layout,
     frontImageUrl,
     alternateImageUrl,
     hasAlternateFace: Boolean(alternateImageUrl),
+    shouldRotatePreview: card.layout === "split",
   };
 }
 

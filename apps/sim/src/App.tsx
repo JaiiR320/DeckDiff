@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { GameState } from "@deckdiff/schemas";
 import { BattlefieldCard } from "./components/BattlefieldCard.js";
 import { Card } from "./components/Card.js";
+import { CardPreviewPopup } from "./components/CardPreviewPopup.js";
 import { DropZone } from "./components/DropZone.js";
 import { HandZone } from "./components/HandZone.js";
 import { PileZone } from "./components/PileZone.js";
@@ -14,7 +15,10 @@ import type { CardPosition, DropTarget } from "./sim/types.js";
 import { parseCardTargetId, parseDropTarget } from "./sim/targets.js";
 import { snapPosition } from "./sim/geometry.js";
 import {
+  canPreviewObject,
   findObjectLocation,
+  isLibraryTopObject,
+  isObjectRevealed,
   isPlayerZone,
   sameTarget,
   topCard,
@@ -27,6 +31,7 @@ import {
   reorderZoneBefore,
   toggleFaceDown,
   toggleFlipped,
+  toggleRevealedToAll,
   toggleTapped,
 } from "./sim/actions.js";
 import { cardImageCacheKey, getCardImage, type SimCardImage } from "./sim/cardImages.js";
@@ -61,7 +66,7 @@ function createSeedGame(): GameState {
           "Lightning Greaves",
           "Rhystic Study",
         ],
-        hand: [],
+        hand: ["Charred Foyer // Warped Space"],
         battlefield: [],
         graveyard: [],
         exile: [],
@@ -95,6 +100,13 @@ export function App() {
   const [cardImagesByName, setCardImagesByName] = useState<CardImagesByName>({});
   const player = game.players[0]!;
   const battlefieldObjects = game.zones.battlefield.objects;
+  const hoveredObjectId = useSimUiStore((state) => state.hoveredObjectId);
+  const hoverClientX = useSimUiStore((state) => state.hoverClientX);
+  const hoveredLocation = hoveredObjectId ? findObjectLocation(game, hoveredObjectId) : null;
+  const previewLocation =
+    hoveredLocation && canPreviewObject(hoveredLocation, player.id) ? hoveredLocation : null;
+  const previewSide =
+    hoverClientX !== null && hoverClientX > window.innerWidth / 2 ? "left" : "right";
   const layout = useBattlefieldLayout(battlefieldObjects);
   const { selectionBox, battlefieldPointerHandlers } = useSelectionMarquee({
     objects: battlefieldObjects,
@@ -183,6 +195,12 @@ export function App() {
     "F",
     () => {
       if (useSimUiStore.getState().draggedObjectId !== null) return;
+      const hoveredObjectId = useSimUiStore.getState().hoveredObjectId;
+      if (hoveredObjectId && isLibraryTopObject(game, hoveredObjectId)) {
+        setGame((currentGame) => toggleRevealedToAll(currentGame, hoveredObjectId));
+        return;
+      }
+
       toggleActionCardsFaceDown();
     },
     { preventDefault: true },
@@ -418,7 +436,7 @@ export function App() {
                     key={topObject.objectId}
                     object={topObject}
                     image={cardImagesByName[cardImageCacheKey(topObject.name)]}
-                    isFaceDown={zone === "library"}
+                    isFaceDown={zone === "library" && !isObjectRevealed(topObject, player.id)}
                     onToggleTapped={toggleActionCardsTapped}
                   />
                 ) : null}
@@ -426,6 +444,14 @@ export function App() {
             );
           })}
         </aside>
+
+        {previewLocation ? (
+          <CardPreviewPopup
+            object={previewLocation.object}
+            image={cardImagesByName[cardImageCacheKey(previewLocation.object.name)]}
+            side={previewSide}
+          />
+        ) : null}
       </main>
     </DragDropProvider>
   );

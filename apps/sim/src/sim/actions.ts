@@ -109,6 +109,18 @@ export function toggleFlipped(game: GameState, objectIds: string[]): GameState {
   return nextGame;
 }
 
+/** Toggles whether an object is publicly revealed. */
+export function toggleRevealedToAll(game: GameState, objectId: string): GameState {
+  const found = findObjectLocation(game, objectId);
+  if (!found) return game;
+
+  return applyCommand(game, {
+    type: "object.setVisibility",
+    objectId,
+    visibility: found.object.visibility?.revealedTo === "all" ? null : { revealedTo: "all" },
+  }).state;
+}
+
 /** Applies primitive move commands for legal objects. */
 export function moveObjects(
   game: GameState,
