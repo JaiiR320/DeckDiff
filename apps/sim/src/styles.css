@@ -61,7 +61,7 @@ body {
 
 .hand-zone {
   display: flex;
-  width: 50vw;
+  flex: 1 1 auto;
   min-width: 420px;
   height: 220px;
   flex-direction: column;
@@ -86,6 +86,7 @@ body {
 
 .pile-zone {
   display: flex;
+  flex: 0 0 156px;
   width: 156px;
   min-height: 220px;
   align-items: center;
