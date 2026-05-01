@@ -166,3 +166,29 @@ export function reorderZoneBefore(
     objectIds: nextObjectIds,
   }).state;
 }
+
+/** Reorders a zone by moving objects to an index among the remaining objects. */
+export function reorderZoneToIndex(
+  game: GameState,
+  target: DropTarget,
+  movedObjectIds: string[],
+  insertIndex: number,
+): GameState {
+  const objectIds = zoneObjects(game, target).map((object) => object.objectId);
+  const movedIdSet = new Set(movedObjectIds);
+  const remainingIds = objectIds.filter((id) => !movedIdSet.has(id));
+  const clampedInsertIndex = Math.min(Math.max(insertIndex, 0), remainingIds.length);
+  const nextObjectIds = [
+    ...remainingIds.slice(0, clampedInsertIndex),
+    ...objectIds.filter((id) => movedIdSet.has(id)),
+    ...remainingIds.slice(clampedInsertIndex),
+  ];
+
+  if (nextObjectIds.every((id, index) => id === objectIds[index])) return game;
+
+  return applyCommand(game, {
+    type: "zone.reorder",
+    zone: toZoneRef(target),
+    objectIds: nextObjectIds,
+  }).state;
+}

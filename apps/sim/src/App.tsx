@@ -2,13 +2,13 @@ import { DragDropProvider, type DragEndEvent, type DragMoveEvent } from "@dnd-ki
 import { Feedback } from "@dnd-kit/dom";
 import { createGame } from "@deckdiff/core";
 import { useHotkey } from "@tanstack/react-hotkeys";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { GameState } from "@deckdiff/schemas";
 import { BattlefieldCard } from "./components/BattlefieldCard.js";
 import { Card } from "./components/Card.js";
 import { CardPreviewPopup } from "./components/CardPreviewPopup.js";
 import { DropZone } from "./components/DropZone.js";
-import { HandZone } from "./components/HandZone.js";
+import { HandZone, handCardCenter } from "./components/HandZone.js";
 import { PileZone } from "./components/PileZone.js";
 import { SelectionMarquee } from "./components/SelectionMarquee.js";
 import type { CardPosition, DropTarget } from "./sim/types.js";
@@ -29,6 +29,7 @@ import {
   canMoveObjectToTarget,
   moveObjects,
   reorderZoneBefore,
+  reorderZoneToIndex,
   toggleFaceDown,
   toggleFlipped,
   toggleRevealedToAll,
@@ -42,6 +43,15 @@ import { useSimUiStore } from "./simUiStore.js";
 const pileZones = ["library", "graveyard", "exile", "command"] as const;
 
 type CardImagesByName = Record<string, SimCardImage | null>;
+
+function handInsertIndexFromClientX(clientX: number, handRect: DOMRectReadOnly, cardCount: number) {
+  const localX = clientX - handRect.left;
+  for (let index = 0; index < cardCount; index += 1) {
+    if (localX < handCardCenter(index, cardCount, handRect.width)) return index;
+  }
+
+  return cardCount;
+}
 
 /** Creates the local seed game until server state exists. */
 function createSeedGame(): GameState {
@@ -98,10 +108,13 @@ function gameCardNames(game: GameState) {
 export function App() {
   const [game, setGame] = useState(createSeedGame);
   const [cardImagesByName, setCardImagesByName] = useState<CardImagesByName>({});
+  const handCardsRectRef = useRef<DOMRectReadOnly | null>(null);
   const player = game.players[0]!;
   const battlefieldObjects = game.zones.battlefield.objects;
   const hoveredObjectId = useSimUiStore((state) => state.hoveredObjectId);
   const hoverClientX = useSimUiStore((state) => state.hoverClientX);
+  const selectedObjectIds = useSimUiStore((state) => state.selectedObjectIds);
+  const handPreview = useSimUiStore((state) => state.handPreview);
   const hoveredLocation = hoveredObjectId ? findObjectLocation(game, hoveredObjectId) : null;
   const previewLocation =
     hoveredLocation && canPreviewObject(hoveredLocation, player.id) ? hoveredLocation : null;
@@ -112,6 +125,16 @@ export function App() {
     objects: battlefieldObjects,
     positions: layout.positions,
   });
+  const handleHandCardsRectChange = useCallback((rect: DOMRectReadOnly | null) => {
+    handCardsRectRef.current = rect;
+  }, []);
+  const previewMovedHandObjectIds =
+    handPreview?.playerId === player.id &&
+    player.zones.hand.objects.some((object) => object.objectId === handPreview.draggedObjectId)
+      ? selectedObjectIds.includes(handPreview.draggedObjectId)
+        ? selectedObjectIds
+        : [handPreview.draggedObjectId]
+      : [];
 
   useEffect(() => {
     const uniqueNames = [...new Set(gameCardNames(game))];
@@ -236,6 +259,32 @@ export function App() {
     );
   }
 
+  /** Reorders cards within a player's hand using a preview insertion index. */
+  function handleHandReorderToIndex(objectId: string, insertIndex: number, playerId: string) {
+    const { selectedObjectIds } = useSimUiStore.getState();
+    const handObjectIds = player.zones.hand.objects.map((object) => object.objectId);
+    const movedObjectIds = selectedObjectIds.includes(objectId)
+      ? selectedObjectIds.filter((selectedObjectId) => handObjectIds.includes(selectedObjectId))
+      : [objectId];
+    if (movedObjectIds.length === 0) return;
+
+    setGame((currentGame) =>
+      reorderZoneToIndex(currentGame, { zone: "hand", playerId }, movedObjectIds, insertIndex),
+    );
+  }
+
+  function handTargetFromDndTarget(targetId: unknown): DropTarget | null {
+    const targetObjectId = parseCardTargetId(targetId);
+    if (targetObjectId) {
+      const targetFound = findObjectLocation(game, targetObjectId);
+      if (targetFound?.zone.zone === "hand" && targetFound.zone.playerId) return targetFound.zone;
+      return null;
+    }
+
+    const target = parseDropTarget(targetId, player.id);
+    return target?.zone === "hand" && target.playerId ? target : null;
+  }
+
   /** Moves a card or selected group to a new zone. */
   function handleZoneMove(
     objectId: string,
@@ -306,6 +355,29 @@ export function App() {
           y: sourceRect.top - (targetRect?.top ?? 0),
         })
       : { x: 24, y: 24 };
+    const targetHand = handTargetFromDndTarget(event.operation.target?.id);
+    const handPreview = useSimUiStore.getState().handPreview;
+    const targetHandPlayerId = targetHand?.playerId;
+    if (
+      targetHand &&
+      targetHandPlayerId &&
+      handPreview?.draggedObjectId === objectId &&
+      handPreview.playerId === targetHandPlayerId
+    ) {
+      if (found.zone.zone === "hand" && found.zone.playerId === targetHandPlayerId) {
+        handleHandReorderToIndex(objectId, handPreview.insertIndex, targetHandPlayerId);
+      } else {
+        handleZoneMove(
+          objectId,
+          { zone: "hand", playerId: targetHandPlayerId },
+          battlefieldDropPosition,
+          handPreview.insertIndex,
+        );
+      }
+      clearDragState();
+      return;
+    }
+
     const targetObjectId = parseCardTargetId(event.operation.target?.id);
 
     if (targetObjectId) {
@@ -362,16 +434,41 @@ export function App() {
   /** Tracks group drag offset while a selected card moves. */
   function handleDragMove(event: DragMoveEvent) {
     const objectId = event.operation.source?.id;
-    const { selectedObjectIds, setDragOffset } = useSimUiStore.getState();
-    if (
-      typeof objectId !== "string" ||
-      selectedObjectIds.length < 2 ||
-      !selectedObjectIds.includes(objectId)
-    ) {
+    if (typeof objectId !== "string") return;
+
+    const { selectedObjectIds, setDragOffset, setHandPreview } = useSimUiStore.getState();
+    if (selectedObjectIds.length >= 2 && selectedObjectIds.includes(objectId)) {
+      setDragOffset(event.operation.transform);
+    }
+
+    const targetHand = handTargetFromDndTarget(event.operation.target?.id);
+    const targetHandPlayerId = targetHand?.playerId;
+    const handRect = handCardsRectRef.current;
+    const sourceRect = event.operation.source?.element?.getBoundingClientRect();
+    if (!targetHand || !targetHandPlayerId || !handRect || !sourceRect) {
+      setHandPreview(null);
       return;
     }
 
-    setDragOffset(event.operation.transform);
+    const found = findObjectLocation(game, objectId);
+    const targetHandObjects =
+      targetHandPlayerId === player.id ? player.zones.hand.objects : zoneObjects(game, targetHand);
+    const movedObjectIds = selectedObjectIds.includes(objectId) ? selectedObjectIds : [objectId];
+    const movedObjectIdSet = new Set(
+      found?.zone.zone === "hand" && found.zone.playerId === targetHandPlayerId
+        ? movedObjectIds
+        : [],
+    );
+    const previewCardCount = targetHandObjects.filter(
+      (object) => !movedObjectIdSet.has(object.objectId),
+    ).length;
+    const insertIndex = handInsertIndexFromClientX(
+      sourceRect.left + sourceRect.width / 2,
+      handRect,
+      previewCardCount,
+    );
+
+    setHandPreview({ playerId: targetHandPlayerId, draggedObjectId: objectId, insertIndex });
   }
 
   return (
@@ -411,6 +508,11 @@ export function App() {
           <HandZone
             target={{ zone: "hand", playerId: player.id }}
             count={player.zones.hand.objects.length}
+            previewInsertIndex={
+              handPreview?.playerId === player.id ? handPreview.insertIndex : null
+            }
+            previewMovedObjectIds={previewMovedHandObjectIds}
+            onCardsRectChange={handleHandCardsRectChange}
           >
             {player.zones.hand.objects.map((object) => (
               <Card
