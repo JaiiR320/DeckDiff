@@ -90,10 +90,6 @@ body {
   pointer-events: none;
 }
 
-.hand-card-moving-source {
-  transition: none;
-}
-
 .pile-zone {
   display: flex;
   flex: 0 0 156px;
@@ -129,6 +125,23 @@ body {
   cursor: grabbing;
 }
 
+.drag-preview-layer {
+  position: fixed;
+  z-index: 3000;
+  width: 120px;
+  height: 168px;
+  pointer-events: none;
+}
+
+.drag-preview-card {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 120px;
+  height: 168px;
+  opacity: 0.96;
+}
+
 .selection-marquee {
   position: absolute;
   z-index: 1000;
@@ -137,7 +150,7 @@ body {
   background: rgba(103, 232, 249, 0.16);
 }
 
-.card-frame-hovered .card,
+.card-frame:hover .card,
 .card-frame-selected .card {
   outline: 3px solid #67e8f9;
   outline-offset: 0;

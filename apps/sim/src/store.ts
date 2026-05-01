@@ -1,18 +1,24 @@
 import { create } from "zustand";
-import type { CardPosition } from "./sim/types.js";
+import type { CardPosition } from "./types.js";
 
 type SimUiStore = {
   hoveredObjectId: string | null;
   hoverClientX: number | null;
   selectedObjectIds: string[];
-  draggedObjectId: string | null;
+  primaryDragObjectId: string | null;
+  dragObjectIds: string[];
   dragOffset: CardPosition;
-  handPreview: { playerId: string; draggedObjectId: string; insertIndex: number } | null;
+  handPreview: {
+    playerId: string;
+    primaryObjectId: string;
+    dragObjectIds: string[];
+    insertIndex: number;
+  } | null;
   setHoveredObjectId: (objectId: string | null, clientX?: number) => void;
   toggleSelected: (objectId: string) => void;
   setSelectedObjectIds: (objectIds: string[]) => void;
   clearSelection: () => void;
-  startDrag: (objectId: string) => void;
+  startDrag: (primaryObjectId: string, dragObjectIds: string[]) => void;
   setDragOffset: (offset: CardPosition) => void;
   setHandPreview: (preview: SimUiStore["handPreview"]) => void;
   clearDrag: () => void;
@@ -24,11 +30,16 @@ export const useSimUiStore = create<SimUiStore>((set) => ({
   hoveredObjectId: null,
   hoverClientX: null,
   selectedObjectIds: [],
-  draggedObjectId: null,
+  primaryDragObjectId: null,
+  dragObjectIds: [],
   dragOffset: zeroPosition,
   handPreview: null,
   setHoveredObjectId: (objectId, clientX) =>
-    set({ hoveredObjectId: objectId, hoverClientX: clientX ?? null }),
+    set((state) => {
+      const hoverClientX = clientX ?? null;
+      if (state.hoveredObjectId === objectId && state.hoverClientX === hoverClientX) return state;
+      return { hoveredObjectId: objectId, hoverClientX };
+    }),
   toggleSelected: (objectId) =>
     set((state) => ({
       selectedObjectIds: state.selectedObjectIds.includes(objectId)
@@ -37,15 +48,25 @@ export const useSimUiStore = create<SimUiStore>((set) => ({
     })),
   setSelectedObjectIds: (objectIds) => set({ selectedObjectIds: objectIds }),
   clearSelection: () => set({ selectedObjectIds: [] }),
-  startDrag: (objectId) =>
-    set({ draggedObjectId: objectId, dragOffset: zeroPosition, handPreview: null }),
+  startDrag: (primaryObjectId, dragObjectIds) =>
+    set({
+      primaryDragObjectId: primaryObjectId,
+      dragObjectIds,
+      dragOffset: zeroPosition,
+      handPreview: null,
+    }),
   setDragOffset: (offset) => set({ dragOffset: offset }),
   setHandPreview: (preview) =>
     set((state) => {
       const current = state.handPreview;
+      if (current === preview) return state;
       if (
         current?.playerId === preview?.playerId &&
-        current?.draggedObjectId === preview?.draggedObjectId &&
+        current?.primaryObjectId === preview?.primaryObjectId &&
+        current?.dragObjectIds.length === preview?.dragObjectIds.length &&
+        current?.dragObjectIds.every(
+          (objectId, index) => objectId === preview?.dragObjectIds[index],
+        ) &&
         current?.insertIndex === preview?.insertIndex
       ) {
         return state;
@@ -53,5 +74,11 @@ export const useSimUiStore = create<SimUiStore>((set) => ({
 
       return { handPreview: preview };
     }),
-  clearDrag: () => set({ draggedObjectId: null, dragOffset: zeroPosition, handPreview: null }),
+  clearDrag: () =>
+    set({
+      primaryDragObjectId: null,
+      dragObjectIds: [],
+      dragOffset: zeroPosition,
+      handPreview: null,
+    }),
 }));

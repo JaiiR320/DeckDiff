@@ -7,7 +7,8 @@ import {
   toggleFlipped,
   toggleRevealedToAll,
   toggleTapped,
-} from "./actions.js";
+} from "./game.js";
+import { getDragObjectIds, resolveDragEndAction, resolveHandPreview } from "./drag/dragRouting.js";
 import {
   canPreviewObject,
   findObjectLocation,
@@ -15,9 +16,9 @@ import {
   isObjectRevealed,
   toZoneRef,
   zoneObjects,
-} from "./gameQueries.js";
-import { intersects, isWithinBattlefield, snapPosition } from "./geometry.js";
-import { parseDropTarget, zoneTargetId } from "./targets.js";
+} from "./zones.js";
+import { intersects, isWithinBattlefield, snapPosition } from "./battlefield/geometry.js";
+import { cardTargetId, parseDropTarget, zoneTargetId } from "./drag/targets.js";
 
 describe("sim helpers", () => {
   it("moves ids before a target while preserving moved order", () => {
@@ -206,5 +207,231 @@ describe("sim helpers", () => {
     expect(moved.players[0]!.zones.hand.objects).toHaveLength(0);
     expect(moved.zones.battlefield.objects[0]?.ownerPlayerId).toBe("p1");
     expect(moved.zones.battlefield.objects[0]?.controllerPlayerId).toBe("p2");
+  });
+
+  it("resolves drag end actions without component state", () => {
+    const game = createGame({
+      players: [{ id: "p1", name: "One", hand: ["Opt"], battlefield: ["Island"] }],
+    });
+    const handObject = game.players[0]!.zones.hand.objects[0]!;
+    const battlefieldObject = game.zones.battlefield.objects[0]!;
+
+    expect(
+      resolveDragEndAction({
+        game,
+        actorPlayerId: "p1",
+        objectId: handObject.objectId,
+        canceled: false,
+        targetId: zoneTargetId({ zone: "battlefield" }),
+        delta: { x: 24, y: 24 },
+        handPreview: null,
+      }),
+    ).toEqual({
+      type: "zone-move",
+      objectId: handObject.objectId,
+      target: { zone: "battlefield" },
+      dropPosition: "zone",
+    });
+
+    expect(
+      resolveDragEndAction({
+        game,
+        actorPlayerId: "p1",
+        objectId: battlefieldObject.objectId,
+        canceled: false,
+        targetId: null,
+        delta: { x: 48, y: 0 },
+        handPreview: null,
+      }),
+    ).toEqual({
+      type: "battlefield-move",
+      objectId: battlefieldObject.objectId,
+      delta: { x: 48, y: 0 },
+    });
+  });
+
+  it("builds hand drag groups", () => {
+    const game = createGame({
+      players: [{ id: "p1", name: "One", hand: ["Opt", "Ponder", "Brainstorm"] }],
+    });
+    const [first, second, third] = game.players[0]!.zones.hand.objects;
+
+    expect(
+      getDragObjectIds({
+        game,
+        primaryObjectId: first!.objectId,
+        selectedObjectIds: [third!.objectId, second!.objectId],
+        actorPlayerId: "p1",
+      }),
+    ).toEqual([first!.objectId]);
+
+    expect(
+      getDragObjectIds({
+        game,
+        primaryObjectId: third!.objectId,
+        selectedObjectIds: [third!.objectId, second!.objectId],
+        actorPlayerId: "p1",
+      }),
+    ).toEqual([third!.objectId, second!.objectId]);
+  });
+
+  it("builds drag groups from selected controlled cards", () => {
+    const game = createGame({
+      players: [
+        { id: "p1", name: "One", battlefield: ["Island", "Forest"] },
+        { id: "p2", name: "Two", battlefield: ["Swamp"] },
+      ],
+    });
+    const [first, second, opponent] = game.zones.battlefield.objects;
+
+    expect(
+      getDragObjectIds({
+        game,
+        primaryObjectId: first!.objectId,
+        selectedObjectIds: [first!.objectId, second!.objectId, opponent!.objectId],
+        actorPlayerId: "p1",
+      }),
+    ).toEqual([first!.objectId, second!.objectId]);
+
+    expect(
+      getDragObjectIds({
+        game,
+        primaryObjectId: second!.objectId,
+        selectedObjectIds: [first!.objectId],
+        actorPlayerId: "p1",
+      }),
+    ).toEqual([second!.objectId]);
+  });
+
+  it("resolves hand preview insert index", () => {
+    const game = createGame({ players: [{ id: "p1", name: "One", hand: ["Opt", "Ponder"] }] });
+    const object = game.players[0]!.zones.hand.objects[0]!;
+    const handRect = { left: 0, width: 300 } as DOMRectReadOnly;
+    const sourceRect = { left: 250, width: 120 } as DOMRect;
+
+    expect(
+      resolveHandPreview({
+        game,
+        objectId: object.objectId,
+        targetId: zoneTargetId({ zone: "hand", playerId: "p1" }),
+        actorPlayerId: "p1",
+        dragObjectIds: [object.objectId],
+        handRect,
+        sourceRect,
+      }),
+    ).toEqual({
+      playerId: "p1",
+      primaryObjectId: object.objectId,
+      dragObjectIds: [object.objectId],
+      insertIndex: 1,
+    });
+  });
+
+  it("resolves hand preview reorder and cross-zone hand insert actions", () => {
+    const game = createGame({
+      players: [{ id: "p1", name: "One", hand: ["Opt", "Ponder"], battlefield: ["Island"] }],
+    });
+    const handObject = game.players[0]!.zones.hand.objects[0]!;
+    const battlefieldObject = game.zones.battlefield.objects[0]!;
+
+    expect(
+      resolveDragEndAction({
+        game,
+        actorPlayerId: "p1",
+        objectId: handObject.objectId,
+        canceled: false,
+        targetId: zoneTargetId({ zone: "hand", playerId: "p1" }),
+        delta: { x: 0, y: 0 },
+        handPreview: {
+          playerId: "p1",
+          primaryObjectId: handObject.objectId,
+          dragObjectIds: [handObject.objectId],
+          insertIndex: 1,
+        },
+      }),
+    ).toEqual({
+      type: "hand-reorder-to-index",
+      objectId: handObject.objectId,
+      insertIndex: 1,
+      playerId: "p1",
+    });
+
+    expect(
+      resolveDragEndAction({
+        game,
+        actorPlayerId: "p1",
+        objectId: battlefieldObject.objectId,
+        canceled: false,
+        targetId: zoneTargetId({ zone: "hand", playerId: "p1" }),
+        delta: { x: 0, y: 0 },
+        handPreview: {
+          playerId: "p1",
+          primaryObjectId: battlefieldObject.objectId,
+          dragObjectIds: [battlefieldObject.objectId],
+          insertIndex: 2,
+        },
+      }),
+    ).toEqual({
+      type: "zone-move",
+      objectId: battlefieldObject.objectId,
+      target: { zone: "hand", playerId: "p1" },
+      dropPosition: "battlefield",
+      insertIndex: 2,
+    });
+  });
+
+  it("resolves card-target hand drops and invalid targets", () => {
+    const game = createGame({
+      players: [{ id: "p1", name: "One", hand: ["Opt"], battlefield: ["Island"] }],
+    });
+    const handObject = game.players[0]!.zones.hand.objects[0]!;
+    const battlefieldObject = game.zones.battlefield.objects[0]!;
+
+    expect(
+      resolveDragEndAction({
+        game,
+        actorPlayerId: "p1",
+        objectId: battlefieldObject.objectId,
+        canceled: false,
+        targetId: cardTargetId(handObject.objectId),
+        delta: { x: 0, y: 0 },
+        handPreview: null,
+      }),
+    ).toEqual({
+      type: "zone-move",
+      objectId: battlefieldObject.objectId,
+      target: { zone: "hand", playerId: "p1" },
+      dropPosition: "battlefield",
+      insertIndex: 0,
+    });
+
+    expect(
+      resolveDragEndAction({
+        game,
+        actorPlayerId: "p1",
+        objectId: handObject.objectId,
+        canceled: false,
+        targetId: "not-a-target",
+        delta: { x: 0, y: 0 },
+        handPreview: null,
+      }),
+    ).toEqual({ type: "none" });
+  });
+
+  it("does not treat a stale hand card target as a hand reorder", () => {
+    const game = createGame({ players: [{ id: "p1", name: "One", hand: ["Opt", "Ponder"] }] });
+    const [draggedObject, targetObject] = game.players[0]!.zones.hand.objects;
+
+    expect(
+      resolveDragEndAction({
+        game,
+        actorPlayerId: "p1",
+        objectId: draggedObject!.objectId,
+        canceled: false,
+        targetId: cardTargetId(targetObject!.objectId),
+        delta: { x: 0, y: 0 },
+        handPreview: null,
+      }),
+    ).toEqual({ type: "none" });
   });
 });

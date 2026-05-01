@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 import type { GameObject } from "@deckdiff/schemas";
-import type { CardPosition, PositionMap } from "../sim/types.js";
-import { gridSize } from "../sim/types.js";
-import { isWithinBattlefield, snapPosition } from "../sim/geometry.js";
+import { isWithinBattlefield, snapPosition } from "./geometry.js";
+import type { CardPosition, PositionMap } from "../types.js";
+import { gridSize } from "../types.js";
 
 /** Returns the starting battlefield layout. */
 function defaultPositions(objects: GameObject[]): PositionMap {

@@ -1,7 +1,7 @@
 import { useDroppable } from "@dnd-kit/react";
 import type { PointerEvent, ReactNode } from "react";
-import type { DropTarget } from "../sim.js";
-import { zoneTargetId } from "../sim.js";
+import type { DropTarget } from "../types.js";
+import { zoneTargetId } from "./targets.js";
 
 export function DropZone({
   target,

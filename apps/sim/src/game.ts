@@ -1,9 +1,8 @@
 import { applyCommand } from "@deckdiff/core";
 import type { GameState } from "@deckdiff/schemas";
 import type { DropTarget } from "./types.js";
-import { findObjectLocation, isPlayerZone, toZoneRef, zoneObjects } from "./gameQueries.js";
+import { findObjectLocation, isPlayerZone, toZoneRef, zoneObjects } from "./zones.js";
 
-/** Chooses which object ids an action applies to. */
 export function actionObjectIds({
   selectedObjectIds,
   hoveredObjectId,
@@ -19,23 +18,51 @@ export function actionObjectIds({
   return [];
 }
 
-/** Moves ids before a target while preserving moved order. */
-export function moveIdsBefore(ids: string[], movedIds: string[], targetId: string): string[] {
-  const movedIdSet = new Set(movedIds);
-  if (movedIdSet.has(targetId)) return ids;
+function toggleStatus(
+  game: GameState,
+  objectIds: string[],
+  status: "faceDown" | "flipped" | "tapped",
+  isAllowed = (_target: DropTarget) => true,
+): GameState {
+  let nextGame = game;
 
-  const remainingIds = ids.filter((id) => !movedIdSet.has(id));
-  const targetIndex = remainingIds.indexOf(targetId);
-  if (targetIndex < 0) return ids;
+  for (const objectId of objectIds) {
+    const found = findObjectLocation(nextGame, objectId);
+    if (!found || !isAllowed(found.zone)) continue;
 
-  return [
-    ...remainingIds.slice(0, targetIndex),
-    ...ids.filter((id) => movedIdSet.has(id)),
-    ...remainingIds.slice(targetIndex),
-  ];
+    nextGame = applyCommand(nextGame, {
+      type: "object.setStatus",
+      objectId,
+      status: { [status]: !found.object.status[status] },
+    }).state;
+  }
+
+  return nextGame;
 }
 
-/** Preflights whether the UI should allow a move. */
+export function toggleTapped(game: GameState, objectIds: string[]): GameState {
+  return toggleStatus(game, objectIds, "tapped", (target) => target.zone === "battlefield");
+}
+
+export function toggleFaceDown(game: GameState, objectIds: string[]): GameState {
+  return toggleStatus(game, objectIds, "faceDown");
+}
+
+export function toggleFlipped(game: GameState, objectIds: string[]): GameState {
+  return toggleStatus(game, objectIds, "flipped");
+}
+
+export function toggleRevealedToAll(game: GameState, objectId: string): GameState {
+  const found = findObjectLocation(game, objectId);
+  if (!found) return game;
+
+  return applyCommand(game, {
+    type: "object.setVisibility",
+    objectId,
+    visibility: found.object.visibility?.revealedTo === "all" ? null : { revealedTo: "all" },
+  }).state;
+}
+
 export function canMoveObjectToTarget(
   game: GameState,
   objectId: string,
@@ -48,80 +75,9 @@ export function canMoveObjectToTarget(
   if (!isPlayerZone(target.zone) && target.zone !== "battlefield" && target.playerId) return false;
   if (found.object.controllerPlayerId !== actorPlayerId) return false;
 
-  if (isPlayerZone(target.zone) && found.object.ownerPlayerId !== undefined) {
-    return found.object.ownerPlayerId === target.playerId;
-  }
-
-  return true;
+  return !isPlayerZone(target.zone) || found.object.ownerPlayerId === target.playerId;
 }
 
-/** Toggles tapped status for battlefield objects. */
-export function toggleTapped(game: GameState, objectIds: string[]): GameState {
-  let nextGame = game;
-
-  for (const objectId of objectIds) {
-    const found = findObjectLocation(nextGame, objectId);
-    if (!found || found.zone.zone !== "battlefield") continue;
-
-    nextGame = applyCommand(nextGame, {
-      type: "object.setStatus",
-      objectId,
-      status: { tapped: !found.object.status.tapped },
-    }).state;
-  }
-
-  return nextGame;
-}
-
-/** Toggles face-down status for objects. */
-export function toggleFaceDown(game: GameState, objectIds: string[]): GameState {
-  let nextGame = game;
-
-  for (const objectId of objectIds) {
-    const found = findObjectLocation(nextGame, objectId);
-    if (!found) continue;
-
-    nextGame = applyCommand(nextGame, {
-      type: "object.setStatus",
-      objectId,
-      status: { faceDown: !found.object.status.faceDown },
-    }).state;
-  }
-
-  return nextGame;
-}
-
-/** Toggles alternate-face status for objects. */
-export function toggleFlipped(game: GameState, objectIds: string[]): GameState {
-  let nextGame = game;
-
-  for (const objectId of objectIds) {
-    const found = findObjectLocation(nextGame, objectId);
-    if (!found) continue;
-
-    nextGame = applyCommand(nextGame, {
-      type: "object.setStatus",
-      objectId,
-      status: { flipped: !found.object.status.flipped },
-    }).state;
-  }
-
-  return nextGame;
-}
-
-/** Toggles whether an object is publicly revealed. */
-export function toggleRevealedToAll(game: GameState, objectId: string): GameState {
-  const found = findObjectLocation(game, objectId);
-  if (!found) return game;
-
-  return applyCommand(game, {
-    type: "object.setVisibility",
-    objectId,
-    visibility: found.object.visibility?.revealedTo === "all" ? null : { revealedTo: "all" },
-  }).state;
-}
-
-/** Applies primitive move commands for legal objects. */
 export function moveObjects(
   game: GameState,
   objectIds: string[],
@@ -134,6 +90,7 @@ export function moveObjects(
   for (const [index, objectId] of objectIds.entries()) {
     const found = findObjectLocation(nextGame, objectId);
     if (!found || !canMoveObjectToTarget(nextGame, objectId, target, actorPlayerId)) continue;
+
     nextGame = applyCommand(nextGame, {
       type: "object.move",
       objectId,
@@ -149,7 +106,21 @@ export function moveObjects(
   return nextGame;
 }
 
-/** Reorders a zone by moving objects before another object. */
+export function moveIdsBefore(ids: string[], movedIds: string[], targetId: string): string[] {
+  const movedIdSet = new Set(movedIds);
+  if (movedIdSet.has(targetId)) return ids;
+
+  const remainingIds = ids.filter((id) => !movedIdSet.has(id));
+  const targetIndex = remainingIds.indexOf(targetId);
+  if (targetIndex < 0) return ids;
+
+  return [
+    ...remainingIds.slice(0, targetIndex),
+    ...ids.filter((id) => movedIdSet.has(id)),
+    ...remainingIds.slice(targetIndex),
+  ];
+}
+
 export function reorderZoneBefore(
   game: GameState,
   target: DropTarget,
@@ -158,16 +129,9 @@ export function reorderZoneBefore(
 ): GameState {
   const objectIds = zoneObjects(game, target).map((object) => object.objectId);
   const nextObjectIds = moveIdsBefore(objectIds, movedObjectIds, targetObjectId);
-  if (nextObjectIds === objectIds) return game;
-
-  return applyCommand(game, {
-    type: "zone.reorder",
-    zone: toZoneRef(target),
-    objectIds: nextObjectIds,
-  }).state;
+  return nextObjectIds === objectIds ? game : reorderZone(game, target, nextObjectIds);
 }
 
-/** Reorders a zone by moving objects to an index among the remaining objects. */
 export function reorderZoneToIndex(
   game: GameState,
   target: DropTarget,
@@ -184,11 +148,15 @@ export function reorderZoneToIndex(
     ...remainingIds.slice(clampedInsertIndex),
   ];
 
-  if (nextObjectIds.every((id, index) => id === objectIds[index])) return game;
+  return nextObjectIds.every((id, index) => id === objectIds[index])
+    ? game
+    : reorderZone(game, target, nextObjectIds);
+}
 
+function reorderZone(game: GameState, target: DropTarget, objectIds: string[]): GameState {
   return applyCommand(game, {
     type: "zone.reorder",
     zone: toZoneRef(target),
-    objectIds: nextObjectIds,
+    objectIds,
   }).state;
 }

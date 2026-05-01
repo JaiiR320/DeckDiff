@@ -1,4 +1,4 @@
-import type { DropTarget, SimZone } from "./types.js";
+import type { DropTarget, SimZone } from "../types.js";
 
 export const battlefieldTargetId = "zone:battlefield";
 export const cardTargetPrefix = "card:";

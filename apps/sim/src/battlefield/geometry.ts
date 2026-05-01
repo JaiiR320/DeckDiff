@@ -1,5 +1,5 @@
-import type { BattlefieldBounds, CardPosition, Rectangle, SelectionBox } from "./types.js";
-import { battlefieldPadding, cardHeight, cardWidth, gridSize, zoneTrayHeight } from "./types.js";
+import type { BattlefieldBounds, CardPosition, Rectangle, SelectionBox } from "../types.js";
+import { battlefieldPadding, cardHeight, cardWidth, gridSize, zoneTrayHeight } from "../types.js";
 
 /** Snaps a number to the table grid. */
 export function snap(value: number): number {

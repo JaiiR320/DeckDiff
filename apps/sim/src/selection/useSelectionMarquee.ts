@@ -1,9 +1,9 @@
 import { useState } from "react";
 import type { PointerEvent } from "react";
 import type { GameObject } from "@deckdiff/schemas";
-import type { CardPosition, PositionMap, SelectionBox } from "../sim/types.js";
-import { cardRectangle, intersects, toRectangle } from "../sim/geometry.js";
-import { useSimUiStore } from "../simUiStore.js";
+import { cardRectangle, intersects, toRectangle } from "../battlefield/geometry.js";
+import type { CardPosition, PositionMap, SelectionBox } from "../types.js";
+import { useSimUiStore } from "../store.js";
 
 /** Converts a pointer event into battlefield-local coordinates. */
 function getBattlefieldPoint(event: PointerEvent<HTMLElement>): CardPosition {

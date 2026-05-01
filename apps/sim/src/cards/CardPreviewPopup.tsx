@@ -1,5 +1,5 @@
 import type { GameObject } from "@deckdiff/schemas";
-import type { SimCardImage } from "../sim/cardImages.js";
+import type { SimCardImage } from "./cardImages.js";
 
 export function CardPreviewPopup({
   object,

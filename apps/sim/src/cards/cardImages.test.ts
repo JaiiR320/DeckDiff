@@ -34,6 +34,8 @@ describe("card image helpers", () => {
       frontImageUrl: "https://cards.scryfall.io/normal/front/lightning-bolt.jpg",
       alternateImageUrl: undefined,
       hasAlternateFace: false,
+      layout: undefined,
+      shouldRotatePreview: false,
     });
   });
 
@@ -65,6 +67,8 @@ describe("card image helpers", () => {
       frontImageUrl: "https://cards.scryfall.io/normal/front/delver.jpg",
       alternateImageUrl: "https://cards.scryfall.io/normal/back/insectile.jpg",
       hasAlternateFace: true,
+      layout: undefined,
+      shouldRotatePreview: false,
     });
   });
 

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
-import type { DropTarget } from "../sim.js";
-import { DropZone } from "./DropZone.js";
+import type { DropTarget } from "../types.js";
+import { DropZone } from "../drag/DropZone.js";
 
 export function PileZone({
   target,
