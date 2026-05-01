@@ -60,12 +60,14 @@ export const Card = memo(function Card({
   image,
   isFaceDown = false,
   isSelectable = true,
+  isDropTarget = true,
   onToggleTapped,
 }: {
   object: GameObject;
   image?: SimCardImage | null;
   isFaceDown?: boolean;
   isSelectable?: boolean;
+  isDropTarget?: boolean;
   onToggleTapped: (objectId: string) => void;
 }) {
   const isSelected = useSimUiStore((state) => state.selectedObjectIds.includes(object.objectId));
@@ -73,15 +75,18 @@ export const Card = memo(function Card({
   const toggleSelected = useSimUiStore((state) => state.toggleSelected);
   const { ref, handleRef } = useDraggable({ id: object.objectId });
   const lastPointerDown = useRef(0);
-  const { ref: droppableRef } = useDroppable({ id: cardTargetId(object.objectId) });
+  const { ref: droppableRef } = useDroppable({
+    id: cardTargetId(object.objectId),
+    disabled: !isDropTarget,
+  });
 
   const setCardElement = useCallback(
     (element: HTMLDivElement | null) => {
       ref(element);
       handleRef(element);
-      droppableRef(element);
+      droppableRef(isDropTarget ? element : null);
     },
-    [ref, handleRef, droppableRef],
+    [ref, handleRef, droppableRef, isDropTarget],
   );
 
   function handlePointerDownCapture(event: PointerEvent) {

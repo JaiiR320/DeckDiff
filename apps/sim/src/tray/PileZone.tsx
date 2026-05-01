@@ -18,7 +18,7 @@ export function PileZone({
       <div className="zone-label">
         {label} ({count})
       </div>
-      {children}
+      <div className="pile-card-slot">{children}</div>
     </DropZone>
   );
 }

@@ -1,6 +1,7 @@
 import { Feedback } from "@dnd-kit/dom";
 import { DragDropProvider, type DragEndEvent, type DragMoveEvent } from "@dnd-kit/react";
 import { useCallback, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import type { GameState, PlayerState } from "@deckdiff/schemas";
 import type { CardImagesByName } from "./cards/useCardImages.js";
 import {
@@ -10,15 +11,19 @@ import {
   reorderZoneToIndex,
 } from "./game.js";
 import { snapPosition } from "./battlefield/geometry.js";
-import { getDragObjectIds, resolveDragEndAction, resolveHandPreview } from "./drag/dragRouting.js";
-import { useBattlefieldLayout } from "./battlefield/useBattlefieldLayout.js";
+import {
+  effectiveDropTargetId,
+  getDragObjectIds,
+  resolveDragEndAction,
+  resolveHandPreview,
+} from "./drag/dragRouting.js";
+import { stackOrderedIds, useBattlefieldLayout } from "./battlefield/useBattlefieldLayout.js";
 import { useSelectionMarquee } from "./selection/useSelectionMarquee.js";
 import type { CardPosition, DropTarget } from "./types.js";
 import { useSimUiStore } from "./store.js";
 import { BattlefieldZone } from "./battlefield/BattlefieldZone.js";
 import { CardPreviewLayer } from "./cards/CardPreviewLayer.js";
 import { DragPreviewLayer, type DragPreviewItem } from "./cards/DragPreviewLayer.js";
-import { zoneTargetId } from "./drag/targets.js";
 import { ZoneTray } from "./tray/ZoneTray.js";
 import { findObjectLocation } from "./zones.js";
 
@@ -58,6 +63,10 @@ function rectCenterIsInside(
   );
 }
 
+function elementIsInsideBattlefield(element: Element | undefined): boolean {
+  return Boolean(element?.closest(".battlefield"));
+}
+
 function battlefieldDragPreviewItems({
   game,
   primaryObjectId,
@@ -73,7 +82,7 @@ function battlefieldDragPreviewItems({
   const primaryPosition = positions[primaryObjectId];
   if (primaryFound?.zone.zone !== "battlefield" || !primaryPosition) return null;
 
-  return dragObjectIds.map((objectId) => {
+  return stackOrderedIds(Object.keys(positions), dragObjectIds).map((objectId) => {
     const position = positions[objectId] ?? primaryPosition;
     return {
       objectId,
@@ -120,6 +129,7 @@ export function SimTable({
     const { dragObjectIds } = useSimUiStore.getState();
     const movedObjectIds = dragObjectIds.length > 0 ? dragObjectIds : [objectId];
     layout.moveBattlefieldObjects(movedObjectIds, delta);
+    layout.bringObjectsToFront(movedObjectIds);
   }
 
   /** Reorders cards within a player's hand. */
@@ -178,6 +188,7 @@ export function SimTable({
       nextGame.zones.battlefield.objects,
       dropPosition,
     );
+    layout.bringObjectsToFront(legalMovedObjectIds);
   }
 
   /** Clears transient drag state after drag completion. */
@@ -199,9 +210,12 @@ export function SimTable({
     const battlefieldRect = getBattlefieldRect();
     const battlefieldDropPosition = dropPositionFromRects(sourceRect, battlefieldRect);
     const zoneDropPosition = dropPositionFromRects(sourceRect, targetRect);
-    const targetId = rectCenterIsInside(sourceRect, battlefieldRect)
-      ? zoneTargetId({ zone: "battlefield" })
-      : event.operation.target?.id;
+    const targetId = effectiveDropTargetId({
+      game,
+      targetId: event.operation.target?.id,
+      sourceCenterInsideBattlefield: rectCenterIsInside(sourceRect, battlefieldRect),
+      targetElementInsideBattlefield: elementIsInsideBattlefield(targetElement),
+    });
     const action = resolveDragEndAction({
       game,
       actorPlayerId,
@@ -212,27 +226,30 @@ export function SimTable({
       handPreview: useSimUiStore.getState().handPreview,
     });
 
-    switch (action.type) {
-      case "battlefield-move":
-        handleBattlefieldMove(action.objectId, action.delta);
-        break;
-      case "hand-reorder":
-        handleHandReorder(action.objectId, action.targetObjectId, action.playerId);
-        break;
-      case "hand-reorder-to-index":
-        handleHandReorderToIndex(action.objectId, action.insertIndex, action.playerId);
-        break;
-      case "zone-move":
-        handleZoneMove(
-          action.objectId,
-          action.target,
-          action.dropPosition === "battlefield" ? battlefieldDropPosition : zoneDropPosition,
-          action.insertIndex,
-        );
-        break;
-    }
+    // Commit position/order updates before clearing the drag preview to avoid a one-frame snapback.
+    flushSync(() => {
+      switch (action.type) {
+        case "battlefield-move":
+          handleBattlefieldMove(action.objectId, action.delta);
+          break;
+        case "hand-reorder":
+          handleHandReorder(action.objectId, action.targetObjectId, action.playerId);
+          break;
+        case "hand-reorder-to-index":
+          handleHandReorderToIndex(action.objectId, action.insertIndex, action.playerId);
+          break;
+        case "zone-move":
+          handleZoneMove(
+            action.objectId,
+            action.target,
+            action.dropPosition === "battlefield" ? battlefieldDropPosition : zoneDropPosition,
+            action.insertIndex,
+          );
+          break;
+      }
 
-    clearDragState();
+      clearDragState();
+    });
   }
 
   /** Tracks group drag offset while a selected card moves. */
@@ -321,6 +338,7 @@ export function SimTable({
 
         <DragPreviewLayer
           game={game}
+          actorPlayerId={actorPlayerId}
           cardImagesByName={cardImagesByName}
           startRect={dragStartRect}
           previewItems={dragPreviewItems}

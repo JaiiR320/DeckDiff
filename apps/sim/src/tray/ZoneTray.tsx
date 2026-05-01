@@ -56,10 +56,9 @@ export function ZoneTray({
 
       {pileZones.map((zone) => {
         const target: DropTarget = isPlayerZone(zone) ? { zone, playerId: player.id } : { zone };
-        const objects = zoneObjects(game, target).filter(
-          (object) => !dragObjectIdSet.has(object.objectId),
-        );
-        const topObject = topCard(objects);
+        const objects = zoneObjects(game, target);
+        const visibleObjects = objects.filter((object) => !dragObjectIdSet.has(object.objectId));
+        const topObject = topCard(visibleObjects);
 
         return (
           <PileZone key={zone} target={target} label={zone} count={objects.length}>
@@ -69,6 +68,7 @@ export function ZoneTray({
                 object={topObject}
                 image={cardImagesByName[cardImageCacheKey(topObject.name)]}
                 isFaceDown={zone === "library" && !isObjectRevealed(topObject, actorPlayerId)}
+                isDropTarget={false}
                 onToggleTapped={onToggleTapped}
               />
             ) : null}

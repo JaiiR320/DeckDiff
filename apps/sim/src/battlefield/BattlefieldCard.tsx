@@ -26,7 +26,7 @@ export const BattlefieldCard = memo(function BattlefieldCard({
 
   return (
     <div className="battlefield-card" style={style}>
-      <Card object={object} image={image} onToggleTapped={onToggleTapped} />
+      <Card object={object} image={image} isDropTarget={false} onToggleTapped={onToggleTapped} />
     </div>
   );
 });

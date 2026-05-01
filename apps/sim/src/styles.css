@@ -105,6 +105,17 @@ body {
   padding: 10px;
 }
 
+.pile-card-slot {
+  position: relative;
+  width: 120px;
+  height: 168px;
+}
+
+.pile-card-slot > .card-frame {
+  position: absolute;
+  inset: 0;
+}
+
 .zone-label {
   color: #a5f3fc;
   font-size: 11px;

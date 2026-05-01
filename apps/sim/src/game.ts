@@ -78,6 +78,10 @@ export function canMoveObjectToTarget(
   return !isPlayerZone(target.zone) || found.object.ownerPlayerId === target.playerId;
 }
 
+function isTopInsertZone(zone: DropTarget["zone"]): boolean {
+  return zone === "library" || zone === "graveyard" || zone === "exile" || zone === "command";
+}
+
 export function moveObjects(
   game: GameState,
   objectIds: string[],
@@ -86,6 +90,7 @@ export function moveObjects(
   insertIndex?: number,
 ): GameState {
   let nextGame = game;
+  const targetInsertIndex = insertIndex ?? (isTopInsertZone(target.zone) ? 0 : undefined);
 
   for (const [index, objectId] of objectIds.entries()) {
     const found = findObjectLocation(nextGame, objectId);
@@ -99,7 +104,7 @@ export function moveObjects(
         target.zone === "battlefield"
           ? (target.playerId ?? found.object.controllerPlayerId)
           : undefined,
-      insertIndex: insertIndex === undefined ? undefined : insertIndex + index,
+      insertIndex: targetInsertIndex === undefined ? undefined : targetInsertIndex + index,
     }).state;
   }
 

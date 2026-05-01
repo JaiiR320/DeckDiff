@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react";
 import type { GameState } from "@deckdiff/schemas";
 import { useSimUiStore } from "../store.js";
-import { findObjectLocation } from "../zones.js";
+import { findObjectLocation, isObjectRevealed } from "../zones.js";
 import { cardImageCacheKey } from "./cardImages.js";
 import { CardVisual } from "./Card.js";
 import type { CardImagesByName } from "./useCardImages.js";
@@ -14,11 +14,13 @@ export type DragPreviewItem = {
 
 export function DragPreviewLayer({
   game,
+  actorPlayerId,
   cardImagesByName,
   startRect,
   previewItems,
 }: {
   game: GameState;
+  actorPlayerId: string;
   cardImagesByName: CardImagesByName;
   startRect: DOMRect | null;
   previewItems: DragPreviewItem[] | null;
@@ -48,6 +50,8 @@ export function DragPreviewLayer({
       {items.map((item) => {
         const found = findObjectLocation(game, item.objectId);
         if (!found) return null;
+        const isFaceDown =
+          found.zone.zone === "library" && !isObjectRevealed(found.object, actorPlayerId);
 
         return (
           <div
@@ -58,6 +62,7 @@ export function DragPreviewLayer({
             <CardVisual
               object={found.object}
               image={cardImagesByName[cardImageCacheKey(found.object.name)]}
+              isFaceDown={isFaceDown}
             />
           </div>
         );

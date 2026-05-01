@@ -8,7 +8,12 @@ import {
   toggleRevealedToAll,
   toggleTapped,
 } from "./game.js";
-import { getDragObjectIds, resolveDragEndAction, resolveHandPreview } from "./drag/dragRouting.js";
+import {
+  effectiveDropTargetId,
+  getDragObjectIds,
+  resolveDragEndAction,
+  resolveHandPreview,
+} from "./drag/dragRouting.js";
 import {
   canPreviewObject,
   findObjectLocation,
@@ -18,6 +23,7 @@ import {
   zoneObjects,
 } from "./zones.js";
 import { intersects, isWithinBattlefield, snapPosition } from "./battlefield/geometry.js";
+import { bringIdsToFront, stackOrderedIds } from "./battlefield/useBattlefieldLayout.js";
 import { cardTargetId, parseDropTarget, zoneTargetId } from "./drag/targets.js";
 
 describe("sim helpers", () => {
@@ -30,6 +36,32 @@ describe("sim helpers", () => {
     const ids = ["a", "b", "c"];
     expect(moveIdsBefore(ids, ["b"], "b")).toBe(ids);
     expect(moveIdsBefore(ids, ["b"], "missing")).toBe(ids);
+  });
+
+  it("brings battlefield ids to front while preserving stack order", () => {
+    const entries = ["x", "a", "b", "y", "c", "z"].map((id) => [id, id.toUpperCase()] as [
+      string,
+      string,
+    ]);
+
+    expect(bringIdsToFront(entries, ["c", "a", "b"]).map(([id]) => id)).toEqual([
+      "x",
+      "y",
+      "z",
+      "a",
+      "b",
+      "c",
+    ]);
+    expect(bringIdsToFront(entries, ["missing"])).toBe(entries);
+    expect(bringIdsToFront(entries, [])).toBe(entries);
+  });
+
+  it("orders dragged battlefield ids by current stack order", () => {
+    expect(stackOrderedIds(["x", "a", "b", "y", "c", "z"], ["c", "a", "b"])).toEqual([
+      "a",
+      "b",
+      "c",
+    ]);
   });
 
   it("round-trips drop target ids", () => {
@@ -175,6 +207,30 @@ describe("sim helpers", () => {
     expect(moved.zones.battlefield.objects).toHaveLength(1);
   });
 
+  it("moves objects to the top of pile zones by default", () => {
+    let game = createGame({ players: [{ id: "p1", name: "One", hand: ["Opt", "Ponder"] }] });
+    const [first, second] = game.players[0]!.zones.hand.objects;
+
+    game = moveObjects(game, [first!.objectId], { zone: "exile" }, "p1");
+    game = moveObjects(game, [second!.objectId], { zone: "exile" }, "p1");
+
+    expect(game.zones.exile.objects.map((object) => object.name)).toEqual(["Ponder", "Opt"]);
+  });
+
+  it("does not prepend hand moves without an explicit insert index", () => {
+    const game = createGame({
+      players: [{ id: "p1", name: "One", hand: ["Opt"], battlefield: ["Island"] }],
+    });
+    const battlefieldObject = game.zones.battlefield.objects[0]!;
+
+    const moved = moveObjects(game, [battlefieldObject.objectId], { zone: "hand", playerId: "p1" }, "p1");
+
+    expect(moved.players[0]!.zones.hand.objects.map((object) => object.name)).toEqual([
+      "Opt",
+      "Island",
+    ]);
+  });
+
   it("only lets the actor move controlled cards", () => {
     const game = createGame({
       players: [
@@ -248,6 +304,29 @@ describe("sim helpers", () => {
       objectId: battlefieldObject.objectId,
       delta: { x: 48, y: 0 },
     });
+  });
+
+  it("routes drops over battlefield cards to the battlefield", () => {
+    const game = createGame({ players: [{ id: "p1", name: "One", battlefield: ["Island"] }] });
+    const battlefieldObject = game.zones.battlefield.objects[0]!;
+
+    expect(
+      effectiveDropTargetId({
+        game,
+        targetId: cardTargetId(battlefieldObject.objectId),
+        sourceCenterInsideBattlefield: false,
+        targetElementInsideBattlefield: false,
+      }),
+    ).toBe(zoneTargetId({ zone: "battlefield" }));
+
+    expect(
+      effectiveDropTargetId({
+        game,
+        targetId: battlefieldObject.objectId,
+        sourceCenterInsideBattlefield: false,
+        targetElementInsideBattlefield: false,
+      }),
+    ).toBe(zoneTargetId({ zone: "battlefield" }));
   });
 
   it("builds hand drag groups", () => {

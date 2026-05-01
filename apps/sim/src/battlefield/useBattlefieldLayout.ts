@@ -27,6 +27,22 @@ export function staggeredPositions(origin: CardPosition, count: number): CardPos
   );
 }
 
+export function bringIdsToFront<T>(entries: [string, T][], objectIds: string[]): [string, T][] {
+  if (objectIds.length === 0) return entries;
+
+  const movedObjectIdSet = new Set(objectIds);
+  const remainingEntries = entries.filter(([objectId]) => !movedObjectIdSet.has(objectId));
+  const movedEntries = entries.filter(([objectId]) => movedObjectIdSet.has(objectId));
+  if (movedEntries.length === 0) return entries;
+
+  return [...remainingEntries, ...movedEntries];
+}
+
+export function stackOrderedIds(stackIds: string[], objectIds: string[]): string[] {
+  const objectIdSet = new Set(objectIds);
+  return stackIds.filter((objectId) => objectIdSet.has(objectId));
+}
+
 /** Manages local battlefield card positions. */
 export function useBattlefieldLayout(initialObjects: GameObject[]) {
   const [positions, setPositions] = useState(() => defaultPositions(initialObjects));
@@ -66,6 +82,13 @@ export function useBattlefieldLayout(initialObjects: GameObject[]) {
     });
   }
 
+  /** Moves cards to the top of the battlefield stack. */
+  function bringObjectsToFront(objectIds: string[]) {
+    setPositions((currentPositions) =>
+      Object.fromEntries(bringIdsToFront(Object.entries(currentPositions), objectIds)),
+    );
+  }
+
   /** Assigns positions for cards that just entered the battlefield. */
   function syncAfterBattlefieldEntry(
     movedObjectIds: string[],
@@ -100,6 +123,7 @@ export function useBattlefieldLayout(initialObjects: GameObject[]) {
     zIndexByObjectId,
     canPlaceOnBattlefield,
     moveBattlefieldObjects,
+    bringObjectsToFront,
     removeObjects,
     syncAfterBattlefieldEntry,
   };

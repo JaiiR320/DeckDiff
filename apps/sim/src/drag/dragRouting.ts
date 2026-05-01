@@ -2,7 +2,7 @@ import type { GameState } from "@deckdiff/schemas";
 import type { CardPosition, DropTarget } from "../types.js";
 import { findObjectLocation, sameTarget, zoneObjects } from "../zones.js";
 import { handInsertIndexFromClientX } from "../tray/handLayout.js";
-import { parseCardTargetId, parseDropTarget } from "./targets.js";
+import { parseCardTargetId, parseDropTarget, zoneTargetId } from "./targets.js";
 
 export type HandPreviewState = {
   playerId: string;
@@ -23,6 +23,26 @@ export type DragEndAction =
     }
   | { type: "hand-reorder"; objectId: string; targetObjectId: string; playerId: string }
   | { type: "hand-reorder-to-index"; objectId: string; insertIndex: number; playerId: string };
+
+export function effectiveDropTargetId({
+  game,
+  targetId,
+  sourceCenterInsideBattlefield,
+  targetElementInsideBattlefield,
+}: {
+  game: GameState;
+  targetId: unknown;
+  sourceCenterInsideBattlefield: boolean;
+  targetElementInsideBattlefield: boolean;
+}): unknown {
+  if (sourceCenterInsideBattlefield || targetElementInsideBattlefield) {
+    return zoneTargetId({ zone: "battlefield" });
+  }
+
+  const targetObjectId = parseCardTargetId(targetId) ?? (typeof targetId === "string" ? targetId : null);
+  const targetFound = targetObjectId ? findObjectLocation(game, targetObjectId) : null;
+  return targetFound?.zone.zone === "battlefield" ? zoneTargetId({ zone: "battlefield" }) : targetId;
+}
 
 export function handTargetFromDndTarget(
   game: GameState,
