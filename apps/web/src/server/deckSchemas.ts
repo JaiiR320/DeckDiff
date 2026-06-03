@@ -14,6 +14,7 @@ export type ListDeckFolderViewInput = { folderPath?: string };
 export type CreateFolderInput = { name: string; parentFolderId?: string | null };
 export type DeleteFolderInput = { folderId: string };
 export type RenameFolderInput = { folderId: string; newName: string };
+export type ReorderFoldersInput = { parentFolderId?: string | null; folderIds: string[] };
 export type MoveDeckToFolderInput = { deckId: string; folderId?: string | null };
 export type SaveDeckInput = {
   deckId: string;
@@ -64,6 +65,11 @@ export const deleteFolderInputSchema = z.object({
 export const renameFolderInputSchema = z.object({
   folderId: z.string().trim().min(1, "Folder ID is required."),
   newName: z.string().trim().min(1, "Folder name is required."),
+});
+
+export const reorderFoldersInputSchema = z.object({
+  parentFolderId: z.string().trim().min(1, "Folder ID is required.").nullable().optional(),
+  folderIds: z.array(z.string().trim().min(1, "Folder ID is required.")).min(1),
 });
 
 export const moveDeckToFolderInputSchema = z.object({

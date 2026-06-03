@@ -60,6 +60,7 @@ export type DeckFolder = {
   name: string;
   slug: string;
   parentFolderId?: string;
+  sortOrder: number;
   createdAt: string;
   updatedAt: string;
 };

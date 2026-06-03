@@ -50,6 +50,13 @@
       "when": 1780128000000,
       "tag": "0006_folders",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1780523921061,
+      "tag": "0007_mighty_wallop",
+      "breakpoints": true
     }
   ]
 }

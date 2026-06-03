@@ -1,9 +1,11 @@
+import { DragDropProvider, type DragEndEvent, useDraggable, useDroppable } from "@dnd-kit/react";
 import { useLoaderData, useNavigate, useRouter } from "@tanstack/react-router";
 import {
   ChevronLeft,
   ChevronRight,
   Folder,
   FolderPlus,
+  GripVertical,
   MoreVertical,
   Pencil,
   Plus,
@@ -29,6 +31,7 @@ import {
   moveDeckToFolderForUser,
   renameDeckForUser,
   renameFolderForUser,
+  reorderFoldersForUser,
   updateDeckCoverForUser,
 } from "#/server/decks";
 
@@ -41,6 +44,7 @@ type DecksPageState = {
   folderName: string;
   showFolderDeleteConfirm: boolean;
   folderOffset: number;
+  optimisticFolderIds: string[] | null;
   visibleFolderSlots: number;
   errorMessage: string | null;
 };
@@ -53,9 +57,39 @@ type FolderCardProps = {
 };
 
 type EditableFolder = NonNullable<DecksPageState["editingFolder"]>;
+type FolderViewItem = DeckFolderView["folders"][number];
 
 function folderSearch(folderPath: string) {
   return { folder: folderPath || undefined };
+}
+
+function reorderFolders(folders: FolderViewItem[], sourceFolderId: string, targetFolderId: string) {
+  const sourceIndex = folders.findIndex((folder) => folder.id === sourceFolderId);
+  const targetIndex = folders.findIndex((folder) => folder.id === targetFolderId);
+  if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) {
+    return folders;
+  }
+
+  const nextFolders = [...folders];
+  const [movedFolder] = nextFolders.splice(sourceIndex, 1);
+  if (!movedFolder) {
+    return folders;
+  }
+
+  nextFolders.splice(targetIndex, 0, movedFolder);
+  return nextFolders;
+}
+
+function applyFolderOrder(folders: FolderViewItem[], folderIds: string[] | null) {
+  if (!folderIds) return folders;
+
+  const foldersById = new Map(folders.map((folder) => [folder.id, folder]));
+  const orderedFolders = folderIds.flatMap((folderId) => {
+    const folder = foldersById.get(folderId);
+    return folder ? [folder] : [];
+  });
+
+  return orderedFolders.length === folders.length ? orderedFolders : folders;
 }
 
 const deckGridClass =
@@ -76,6 +110,7 @@ export function DecksPage() {
       folderName: "",
       showFolderDeleteConfirm: false,
       folderOffset: 0,
+      optimisticFolderIds: null,
       visibleFolderSlots: 1,
       errorMessage: null,
     },
@@ -89,10 +124,12 @@ export function DecksPage() {
     folderName,
     showFolderDeleteConfirm,
     folderOffset,
+    optimisticFolderIds,
     visibleFolderSlots,
     errorMessage,
   } = state;
   const folderViewportRef = useRef<HTMLDivElement | null>(null);
+  const currentFolderId = view.currentFolder?.id ?? null;
 
   useEffect(() => {
     const viewport = folderViewportRef.current;
@@ -116,8 +153,11 @@ export function DecksPage() {
     return () => resizeObserver.disconnect();
   }, []);
 
+  useEffect(() => {
+    setState({ optimisticFolderIds: null });
+  }, [currentFolderId, view.folders]);
+
   function openFolder(folderPath: string) {
-    setState({ folderOffset: 0 });
     void navigate({ to: "/decks", search: folderSearch(folderPath) });
   }
 
@@ -135,6 +175,31 @@ export function DecksPage() {
 
   async function refreshDecks() {
     await router.invalidate();
+  }
+
+  async function handleFolderDragEnd(event: DragEndEvent) {
+    const sourceFolderId = String(event.operation.source?.id ?? "");
+    const targetFolderId = event.operation.target?.data.folderId as string | undefined;
+
+    if (event.operation.canceled || !sourceFolderId || !targetFolderId) return;
+
+    const nextFolders = reorderFolders(displayedFolders, sourceFolderId, targetFolderId);
+    if (nextFolders === displayedFolders) return;
+
+    const folderIds = nextFolders.map((folder) => folder.id);
+    setState({ optimisticFolderIds: folderIds, errorMessage: null });
+
+    try {
+      await reorderFoldersForUser({ data: { parentFolderId: currentFolderId, folderIds } });
+      await refreshDecks();
+    } catch (error) {
+      setState({
+        optimisticFolderIds: null,
+        errorMessage:
+          error instanceof Error ? error.message : "Could not reorder folders right now.",
+      });
+      await refreshDecks();
+    }
   }
 
   async function handleCreateDeck(event: FormEvent<HTMLFormElement>) {
@@ -318,8 +383,9 @@ export function DecksPage() {
     setState({ editingDeck: null });
   }
 
-  const hasItems = view.folders.length > 0 || view.decks.length > 0;
-  const maxFolderOffset = Math.max(0, view.folders.length - visibleFolderSlots);
+  const displayedFolders = applyFolderOrder(view.folders, optimisticFolderIds);
+  const hasItems = displayedFolders.length > 0 || view.decks.length > 0;
+  const maxFolderOffset = Math.max(0, displayedFolders.length - visibleFolderSlots);
   const clampedFolderOffset = Math.min(folderOffset, maxFolderOffset);
 
   return (
@@ -361,7 +427,7 @@ export function DecksPage() {
             </div>
           </div>
 
-          {view.folders.length > 0 ? (
+          {displayedFolders.length > 0 ? (
             <section className="relative mb-5">
               <IconButton
                 aria-label="Show previous folder"
@@ -371,35 +437,37 @@ export function DecksPage() {
               >
                 <ChevronLeft className="size-5" strokeWidth={1.75} />
               </IconButton>
-              <div ref={folderViewportRef} className="overflow-hidden">
-                <div
-                  className="flex gap-5 transition-transform duration-200 ease-out"
-                  style={{
-                    transform: `translateX(calc(-${clampedFolderOffset} * (24rem + 1.25rem)))`,
-                  }}
-                >
-                  {view.folders.map((folder) => {
-                    const folderPath = view.currentFolderPath
-                      ? `${view.currentFolderPath}/${folder.slug}`
-                      : folder.slug;
-                    return (
-                      <FolderCard
-                        key={folder.id}
-                        folder={folder}
-                        path={folderPath}
-                        onOpen={openFolder}
-                        onEdit={(nextFolder) =>
-                          setState({
-                            editingFolder: nextFolder,
-                            folderName: nextFolder.name,
-                            showFolderDeleteConfirm: false,
-                          })
-                        }
-                      />
-                    );
-                  })}
+              <DragDropProvider onDragEnd={handleFolderDragEnd}>
+                <div ref={folderViewportRef} className="overflow-hidden">
+                  <div
+                    className="flex gap-5 transition-transform duration-200 ease-out"
+                    style={{
+                      transform: `translateX(calc(-${clampedFolderOffset} * (24rem + 1.25rem)))`,
+                    }}
+                  >
+                    {displayedFolders.map((folder) => {
+                      const folderPath = view.currentFolderPath
+                        ? `${view.currentFolderPath}/${folder.slug}`
+                        : folder.slug;
+                      return (
+                        <FolderCard
+                          key={folder.id}
+                          folder={folder}
+                          path={folderPath}
+                          onOpen={openFolder}
+                          onEdit={(nextFolder) =>
+                            setState({
+                              editingFolder: nextFolder,
+                              folderName: nextFolder.name,
+                              showFolderDeleteConfirm: false,
+                            })
+                          }
+                        />
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
+              </DragDropProvider>
               <IconButton
                 aria-label="Show next folder"
                 disabled={clampedFolderOffset >= maxFolderOffset}
@@ -526,9 +594,32 @@ function Breadcrumbs({
 }
 
 function FolderCard({ folder, path, onOpen, onEdit }: FolderCardProps) {
+  const {
+    isDragging,
+    ref: draggableRef,
+    handleRef,
+  } = useDraggable({
+    id: folder.id,
+    type: "folder",
+  });
+  const { isDropTarget, ref: droppableRef } = useDroppable({
+    id: `folder-drop-${folder.id}`,
+    type: "folder-drop",
+    accept: "folder",
+    data: { folderId: folder.id },
+  });
+
   return (
-    <div className="group relative flex min-h-24 w-96 shrink-0 flex-col justify-center rounded-2xl border border-zinc-800 bg-zinc-950 px-5 py-4 text-left transition hover:border-zinc-700">
-      <div className="pointer-events-none grid grid-cols-[1.75rem_1fr] items-center gap-x-3 gap-y-2 pr-12">
+    <div
+      ref={(element) => {
+        draggableRef(element);
+        droppableRef(element);
+      }}
+      className={`group relative flex min-h-24 w-96 shrink-0 flex-col justify-center rounded-2xl border bg-zinc-950 px-5 py-4 text-left transition hover:border-zinc-700 ${
+        isDropTarget ? "border-cyan-700/70" : "border-zinc-800"
+      } ${isDragging ? "opacity-50" : "opacity-100"}`}
+    >
+      <div className="pointer-events-none grid grid-cols-[1.75rem_1fr] items-center gap-x-3 gap-y-2 pr-24">
         <Folder className="size-7 shrink-0 text-amber-300" strokeWidth={1.75} />
         <span className="truncate text-2xl font-semibold tracking-tight text-zinc-100">
           {folder.name}
@@ -544,18 +635,29 @@ function FolderCard({ folder, path, onOpen, onEdit }: FolderCardProps) {
         className="absolute inset-0 rounded-2xl"
         aria-label={`Open ${folder.name}`}
       />
-      <IconButton
-        onClick={(event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          onEdit(folder);
-        }}
-        aria-label={`Open ${folder.name} settings`}
-        variant="ghost"
-        className="absolute right-6 top-6 z-20 cursor-pointer p-2 opacity-0 group-hover:opacity-100"
-      >
-        <MoreVertical className="size-5" strokeWidth={1.75} />
-      </IconButton>
+      <div className="absolute right-4 top-4 z-20 flex items-center rounded-xl border border-zinc-800 bg-zinc-950/90 p-1 opacity-0 shadow-lg shadow-black/20 transition group-hover:opacity-100">
+        <button
+          ref={handleRef}
+          type="button"
+          onClick={(event) => event.stopPropagation()}
+          className="cursor-grab rounded-lg p-2 text-zinc-500 transition hover:bg-zinc-900 hover:text-zinc-200 active:cursor-grabbing"
+          aria-label={`Reorder ${folder.name}`}
+        >
+          <GripVertical className="size-4" strokeWidth={1.75} />
+        </button>
+        <IconButton
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            onEdit(folder);
+          }}
+          aria-label={`Open ${folder.name} settings`}
+          variant="ghost"
+          className="cursor-pointer rounded-lg p-2"
+        >
+          <MoreVertical className="size-4" strokeWidth={1.75} />
+        </IconButton>
+      </div>
     </div>
   );
 }
