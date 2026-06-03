@@ -117,7 +117,6 @@ export function DecksPage() {
   }, []);
 
   function openFolder(folderPath: string) {
-    setState({ folderOffset: 0 });
     void navigate({ to: "/decks", search: folderSearch(folderPath) });
   }
 
