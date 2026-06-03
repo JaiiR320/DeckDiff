@@ -16,6 +16,7 @@ import {
   moveDeckToFolderInputSchema,
   renameDeckInputSchema,
   renameFolderInputSchema,
+  reorderFoldersInputSchema,
   saveDeckInputSchema,
   updateDeckCoverInputSchema,
   updateDeckColorsInputSchema,
@@ -29,6 +30,7 @@ import {
   type MoveDeckToFolderInput,
   type RenameDeckInput,
   type RenameFolderInput,
+  type ReorderFoldersInput,
   type SaveDeckInput,
   type UpdateDeckCoverInput,
   type UpdateDeckColorsInput,
@@ -56,6 +58,7 @@ function mapFolder(folder: FolderRow): DeckFolder {
     name: folder.name,
     slug: folder.slug,
     parentFolderId: folder.parentFolderId ?? undefined,
+    sortOrder: folder.sortOrder,
     createdAt: folder.createdAt.toISOString(),
     updatedAt: folder.updatedAt.toISOString(),
   };
@@ -104,7 +107,9 @@ function buildFolderOptions(allFolders: FolderRow[]): DeckFolderOption[] {
   }
 
   for (const siblingFolders of foldersByParentId.values()) {
-    siblingFolders.sort((left, right) => left.name.localeCompare(right.name));
+    siblingFolders.sort(
+      (left, right) => left.sortOrder - right.sortOrder || left.name.localeCompare(right.name),
+    );
   }
 
   const options: DeckFolderOption[] = [];
@@ -291,6 +296,19 @@ async function requireFolderForUser(userId: string, folderId: string) {
   return folder;
 }
 
+async function getSiblingFolders(userId: string, parentFolderId: string | null) {
+  return db
+    .select()
+    .from(folders)
+    .where(
+      and(
+        eq(folders.userId, userId),
+        parentFolderId ? eq(folders.parentFolderId, parentFolderId) : isNull(folders.parentFolderId),
+      ),
+    )
+    .orderBy(asc(folders.sortOrder), asc(folders.name));
+}
+
 export const listDecks = createServerFn({ method: "GET" }).handler(async () => {
   const userId = await requireUserId();
   return getDeckRowsWithSaves(userId);
@@ -304,7 +322,7 @@ export const listDeckFolderView = createServerFn({ method: "GET" })
       .select()
       .from(folders)
       .where(eq(folders.userId, userId))
-      .orderBy(asc(folders.name));
+      .orderBy(asc(folders.sortOrder), asc(folders.name));
     const { breadcrumbs, currentFolder, currentFolderPath } = resolveFolderPath(
       allFolders,
       data.folderPath,
@@ -394,12 +412,15 @@ export const createFolderForUser = createServerFn({ method: "POST" })
     }
 
     const now = new Date();
+    const siblingFolders = await getSiblingFolders(userId, parentFolderId);
+    const maxSortOrder = Math.max(-1, ...siblingFolders.map((folder) => folder.sortOrder));
     const folder = {
       id: crypto.randomUUID(),
       userId,
       parentFolderId,
       slug: await getUniqueFolderSlug(userId, parentFolderId, name),
       name,
+      sortOrder: maxSortOrder + 1,
       createdAt: now,
       updatedAt: now,
     };
@@ -455,6 +476,38 @@ export const renameFolderForUser = createServerFn({ method: "POST" })
 
     const updatedFolder = await requireFolderForUser(userId, folder.id);
     return mapFolder(updatedFolder);
+  });
+
+export const reorderFoldersForUser = createServerFn({ method: "POST" })
+  .inputValidator((data: ReorderFoldersInput) => reorderFoldersInputSchema.parse(data))
+  .handler(async ({ data }) => {
+    const userId = await requireUserId();
+    const parentFolderId = data.parentFolderId ?? null;
+
+    if (parentFolderId) {
+      await requireFolderForUser(userId, parentFolderId);
+    }
+
+    const siblingFolders = await getSiblingFolders(userId, parentFolderId);
+    const siblingIds = new Set(siblingFolders.map((folder) => folder.id));
+    const nextIds = new Set(data.folderIds);
+
+    if (
+      siblingIds.size !== data.folderIds.length ||
+      nextIds.size !== data.folderIds.length ||
+      data.folderIds.some((folderId) => !siblingIds.has(folderId))
+    ) {
+      throw new Error("Folder order does not match the current folder list.");
+    }
+
+    const now = new Date();
+    await Promise.all(
+      data.folderIds.map((folderId, sortOrder) =>
+        db.update(folders).set({ sortOrder, updatedAt: now }).where(eq(folders.id, folderId)),
+      ),
+    );
+
+    return { success: true };
   });
 
 export const moveDeckToFolderForUser = createServerFn({ method: "POST" })
