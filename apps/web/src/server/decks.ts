@@ -303,7 +303,9 @@ async function getSiblingFolders(userId: string, parentFolderId: string | null) 
     .where(
       and(
         eq(folders.userId, userId),
-        parentFolderId ? eq(folders.parentFolderId, parentFolderId) : isNull(folders.parentFolderId),
+        parentFolderId
+          ? eq(folders.parentFolderId, parentFolderId)
+          : isNull(folders.parentFolderId),
       ),
     )
     .orderBy(asc(folders.sortOrder), asc(folders.name));
