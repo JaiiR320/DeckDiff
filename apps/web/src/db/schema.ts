@@ -1,4 +1,4 @@
-import type { DeckColor, DeckStackLayout, DeckTileCover } from "#/lib/deck";
+import type { DeckColor, DeckStackLayout, DeckTileCover, FolderBackground } from "#/lib/deck";
 import type { DeckCategory, ValidatedDeckCard } from "#/lib/decklist";
 import { sql } from "drizzle-orm";
 import {
@@ -116,6 +116,7 @@ export const folders = pgTable(
     }),
     slug: text("slug").notNull(),
     name: text("name").notNull(),
+    background: jsonb("background").$type<FolderBackground | null>(),
     sortOrder: integer("sort_order").notNull().default(0),
     ...timestamps,
   },

@@ -6,6 +6,7 @@ import {
   Folder,
   FolderInput,
   GripVertical,
+  Image,
   ImageOff,
   Pencil,
   Plus,
@@ -41,6 +42,7 @@ type DeckActionsModalProps = {
   currentFolderId?: string | null;
   onColorsChange?: (colors: DeckColor[]) => void | Promise<unknown>;
   onClearCover?: (deckId: string) => void;
+  onEditCoverCrop?: (deck: DeckItem) => void;
   onSwapSplitCover?: (deck: DeckItem) => void;
   categories?: DeckCategory[];
   cards?: ValidatedDeckCard[];
@@ -95,6 +97,7 @@ export function DeckActionsModal({
   currentFolderId = null,
   onColorsChange,
   onClearCover,
+  onEditCoverCrop,
   onSwapSplitCover,
   categories,
   cards = EMPTY_CARDS,
@@ -224,6 +227,7 @@ export function DeckActionsModal({
             onColorsChange={onColorsChange}
             onDraftColorsChange={setDraftColors}
             onClearCover={onClearCover}
+            onEditCoverCrop={onEditCoverCrop}
             onSwapSplitCover={onSwapSplitCover}
             onRenameSubmit={handleRenameSubmit}
             setState={setState}
@@ -268,6 +272,7 @@ function GeneralSettingsTab({
   onColorsChange,
   onDraftColorsChange,
   onClearCover,
+  onEditCoverCrop,
   onSwapSplitCover,
   onRenameSubmit,
   setState,
@@ -286,6 +291,7 @@ function GeneralSettingsTab({
   onColorsChange?: (colors: DeckColor[]) => void | Promise<unknown>;
   onDraftColorsChange: (colors: DeckColor[]) => void;
   onClearCover?: (deckId: string) => void;
+  onEditCoverCrop?: (deck: DeckItem) => void;
   onSwapSplitCover?: (deck: DeckItem) => void;
   onRenameSubmit: (event: FormEvent<HTMLFormElement>) => void;
   setState: Dispatch<Partial<ModalState>>;
@@ -452,6 +458,16 @@ function GeneralSettingsTab({
         <Download className="size-5 text-zinc-500" strokeWidth={1.75} />
         <span>Export deck list</span>
       </Button>
+
+      {deck.cover && onEditCoverCrop ? (
+        <Button
+          onClick={() => onEditCoverCrop(deck)}
+          className="w-full justify-start px-4 py-3 text-left"
+        >
+          <Image className="size-5 text-zinc-500" strokeWidth={1.75} />
+          <span>Edit cover crop</span>
+        </Button>
+      ) : null}
 
       {deck.cover && onClearCover ? (
         <Button

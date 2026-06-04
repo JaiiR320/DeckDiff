@@ -57,6 +57,13 @@
       "when": 1780523921061,
       "tag": "0007_mighty_wallop",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1780535040523,
+      "tag": "0008_quiet_mantis",
+      "breakpoints": true
     }
   ]
 }

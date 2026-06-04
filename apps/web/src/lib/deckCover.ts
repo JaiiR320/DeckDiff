@@ -1,4 +1,4 @@
-import type { DeckTileCover, DeckTileCoverCard } from "./deck";
+import type { DeckTileCover, DeckTileCoverCard, ImageCrop } from "./deck";
 import {
   normalizeCategoryNameForCompare,
   normalizeDeckCard,
@@ -25,7 +25,9 @@ export function createCommanderDeckCover(
   for (const card of cards) {
     const normalizedCard = normalizeDeckCard(card, normalizedCategories);
     if (normalizedCard.categoryId === commanderCategory.id && normalizedCard.imageUrl) {
-      commanderCards.push(toCoverCard(normalizedCard));
+      commanderCards.push(
+        toCoverCard(normalizedCard, findPreviousCrop(previousCover, normalizedCard)),
+      );
     }
   }
 
@@ -54,12 +56,32 @@ export function swapSplitDeckCover(cover: DeckTileCover): DeckTileCover {
   return cover.kind === "split" ? { ...cover, reversed: !cover.reversed } : cover;
 }
 
-function toCoverCard(card: ValidatedDeckCard): DeckTileCoverCard {
+function toCoverCard(card: ValidatedDeckCard, crop?: ImageCrop): DeckTileCoverCard {
   return {
     oracleId: card.oracleId,
     setCode: card.setCode,
     collectorNumber: card.collectorNumber,
     name: card.name,
     imageUrl: card.imageUrl!,
+    crop,
   };
+}
+
+function findPreviousCrop(
+  cover: DeckTileCover | null | undefined,
+  card: ValidatedDeckCard,
+): ImageCrop | undefined {
+  if (!cover) return undefined;
+
+  const previousCards = cover.kind === "split" ? cover.cards : [cover];
+  return previousCards.find((previousCard) => isSameCoverCard(previousCard, card))?.crop;
+}
+
+function isSameCoverCard(coverCard: DeckTileCoverCard, card: ValidatedDeckCard) {
+  return (
+    coverCard.oracleId === card.oracleId &&
+    coverCard.setCode === card.setCode &&
+    coverCard.collectorNumber === card.collectorNumber &&
+    coverCard.imageUrl === card.imageUrl
+  );
 }

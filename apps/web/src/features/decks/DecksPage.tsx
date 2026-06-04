@@ -6,6 +6,8 @@ import {
   Folder,
   FolderPlus,
   GripVertical,
+  Image,
+  ImageOff,
   MoreVertical,
   Pencil,
   Plus,
@@ -16,6 +18,7 @@ import type { FormEvent } from "react";
 import { DeckActionsModal } from "#/components/decks/DeckActionsModal";
 import { CreateDeckModal } from "#/components/decks/CreateDeckModal";
 import { DeckCard } from "#/components/decks/DeckCard";
+import { ImageCropModal } from "#/components/decks/ImageCropModal";
 import { Button } from "#/components/ui/Button";
 import { IconButton } from "#/components/ui/IconButton";
 import { Input } from "#/components/ui/Input";
@@ -23,6 +26,7 @@ import { Modal } from "#/components/ui/Modal";
 import type { DeckFolderView, DeckItem } from "#/lib/deck";
 import { swapSplitDeckCover } from "#/lib/deckCover";
 import { createDeckExport } from "#/lib/deckExport";
+import { getImageCropStyle } from "#/lib/imageCrop";
 import {
   createDeckForUser,
   createFolderForUser,
@@ -33,6 +37,7 @@ import {
   renameFolderForUser,
   reorderFoldersForUser,
   updateDeckCoverForUser,
+  updateFolderBackgroundForUser,
 } from "#/server/decks";
 
 type DecksPageState = {
@@ -40,8 +45,11 @@ type DecksPageState = {
   isCreateFolderOpen: boolean;
   name: string;
   editingDeck: DeckItem | null;
+  cropDeck: DeckItem | null;
   editingFolder: DeckFolderView["folders"][number] | DeckFolderView["currentFolder"] | null;
+  cropFolder: DeckFolderView["folders"][number] | DeckFolderView["currentFolder"] | null;
   folderName: string;
+  folderBackgroundUrl: string;
   showFolderDeleteConfirm: boolean;
   folderOffset: number;
   optimisticFolderIds: string[] | null;
@@ -106,8 +114,11 @@ export function DecksPage() {
       isCreateFolderOpen: false,
       name: "",
       editingDeck: null,
+      cropDeck: null,
       editingFolder: null,
+      cropFolder: null,
       folderName: "",
+      folderBackgroundUrl: "",
       showFolderDeleteConfirm: false,
       folderOffset: 0,
       optimisticFolderIds: null,
@@ -120,8 +131,11 @@ export function DecksPage() {
     isCreateFolderOpen,
     name,
     editingDeck,
+    cropDeck,
     editingFolder,
+    cropFolder,
     folderName,
+    folderBackgroundUrl,
     showFolderDeleteConfirm,
     folderOffset,
     optimisticFolderIds,
@@ -170,7 +184,12 @@ export function DecksPage() {
   }
 
   function closeFolderModal() {
-    setState({ editingFolder: null, folderName: "", showFolderDeleteConfirm: false });
+    setState({
+      editingFolder: null,
+      folderName: "",
+      folderBackgroundUrl: "",
+      showFolderDeleteConfirm: false,
+    });
   }
 
   async function refreshDecks() {
@@ -363,6 +382,63 @@ export function DecksPage() {
     }
   }
 
+  async function handleSaveFolderBackground(folder: EditableFolder) {
+    const imageUrl = folderBackgroundUrl.trim();
+
+    try {
+      const updatedFolder = await updateFolderBackgroundForUser({
+        data: {
+          folderId: folder.id,
+          background: imageUrl
+            ? {
+                imageUrl,
+                crop: folder.background?.imageUrl === imageUrl ? folder.background.crop : undefined,
+              }
+            : null,
+        },
+      });
+
+      setState({
+        editingFolder: {
+          ...folder,
+          background: updatedFolder.background,
+          updatedAt: updatedFolder.updatedAt,
+        },
+        errorMessage: null,
+      });
+      await refreshDecks();
+    } catch (error) {
+      setState({
+        errorMessage:
+          error instanceof Error ? error.message : "Could not update folder background right now.",
+      });
+    }
+  }
+
+  async function handleClearFolderBackground(folder: EditableFolder) {
+    try {
+      const updatedFolder = await updateFolderBackgroundForUser({
+        data: { folderId: folder.id, background: null },
+      });
+
+      setState({
+        editingFolder: {
+          ...folder,
+          background: updatedFolder.background,
+          updatedAt: updatedFolder.updatedAt,
+        },
+        folderBackgroundUrl: "",
+        errorMessage: null,
+      });
+      await refreshDecks();
+    } catch (error) {
+      setState({
+        errorMessage:
+          error instanceof Error ? error.message : "Could not clear folder background right now.",
+      });
+    }
+  }
+
   function handleExportDeck(deck: DeckItem) {
     const deckExport = createDeckExport(deck);
     if (!deckExport.ok) {
@@ -416,6 +492,7 @@ export function DecksPage() {
                     setState({
                       editingFolder: view.currentFolder,
                       folderName: view.currentFolder?.name ?? "",
+                      folderBackgroundUrl: view.currentFolder?.background?.imageUrl ?? "",
                       showFolderDeleteConfirm: false,
                     })
                   }
@@ -459,6 +536,7 @@ export function DecksPage() {
                             setState({
                               editingFolder: nextFolder,
                               folderName: nextFolder.name,
+                              folderBackgroundUrl: nextFolder.background?.imageUrl ?? "",
                               showFolderDeleteConfirm: false,
                             })
                           }
@@ -532,6 +610,7 @@ export function DecksPage() {
           folderOptions={view.folderOptions}
           currentFolderId={view.deckFolderIds[editingDeck.id] ?? null}
           onClearCover={handleClearCover}
+          onEditCoverCrop={(deck) => setState({ cropDeck: deck, editingDeck: null })}
           onSwapSplitCover={handleSwapSplitCover}
         />
       ) : null}
@@ -540,12 +619,121 @@ export function DecksPage() {
         <FolderSettingsModal
           folder={editingFolder}
           folderName={folderName}
+          folderBackgroundUrl={folderBackgroundUrl}
           showDeleteConfirm={showFolderDeleteConfirm}
           onFolderNameChange={(nextName) => setState({ folderName: nextName })}
+          onFolderBackgroundUrlChange={(nextUrl) => setState({ folderBackgroundUrl: nextUrl })}
           onClose={closeFolderModal}
           onRename={handleRenameFolder}
+          onSaveBackground={() => void handleSaveFolderBackground(editingFolder)}
+          onClearBackground={() => void handleClearFolderBackground(editingFolder)}
+          onEditBackgroundCrop={() => setState({ cropFolder: editingFolder, editingFolder: null })}
           onDelete={() => void handleDeleteFolder(editingFolder)}
           onDeleteConfirmChange={(showFolderDeleteConfirm) => setState({ showFolderDeleteConfirm })}
+        />
+      ) : null}
+
+      {cropDeck?.cover ? (
+        <ImageCropModal
+          title="Edit cover crop"
+          aspectRatio={3 / 2}
+          images={
+            cropDeck.cover.kind === "split"
+              ? cropDeck.cover.cards.map((card, index) => ({
+                  id: String(index),
+                  name: card.name,
+                  imageUrl: card.imageUrl,
+                  crop: card.crop,
+                }))
+              : [
+                  {
+                    id: "single",
+                    name: cropDeck.cover.name,
+                    imageUrl: cropDeck.cover.imageUrl,
+                    crop: cropDeck.cover.crop,
+                  },
+                ]
+          }
+          onClose={() => setState({ cropDeck: null })}
+          onSave={(cropsById) => {
+            if (!cropDeck.cover) return;
+
+            const nextCover = cropDeck.cover;
+            const cover =
+              nextCover.kind === "split"
+                ? {
+                    ...nextCover,
+                    cards: [
+                      { ...nextCover.cards[0], crop: cropsById["0"] },
+                      { ...nextCover.cards[1], crop: cropsById["1"] },
+                    ] as typeof nextCover.cards,
+                  }
+                : { ...nextCover, crop: cropsById.single };
+
+            void updateDeckCoverForUser({ data: { deckId: cropDeck.id, cover } })
+              .then((updatedDeck) => {
+                if (!updatedDeck) throw new Error("Could not update deck cover.");
+                setState({ cropDeck: null, editingDeck: updatedDeck, errorMessage: null });
+                return refreshDecks();
+              })
+              .catch((error: unknown) =>
+                setState({
+                  errorMessage:
+                    error instanceof Error
+                      ? error.message
+                      : "Could not update deck cover right now.",
+                }),
+              );
+          }}
+        />
+      ) : null}
+
+      {cropFolder?.background ? (
+        <ImageCropModal
+          title="Edit folder background crop"
+          aspectRatio={4}
+          images={[
+            {
+              id: "background",
+              name: cropFolder.name,
+              imageUrl: cropFolder.background.imageUrl,
+              crop: cropFolder.background.crop,
+            },
+          ]}
+          onClose={() => setState({ cropFolder: null })}
+          onSave={(cropsById) => {
+            const folder = cropFolder;
+            if (!folder?.background) return;
+
+            void updateFolderBackgroundForUser({
+              data: {
+                folderId: folder.id,
+                background: { imageUrl: folder.background.imageUrl, crop: cropsById.background },
+              },
+            })
+              .then((updatedFolder) => {
+                setState({
+                  cropFolder: null,
+                  editingFolder: {
+                    ...folder,
+                    background: updatedFolder.background,
+                    updatedAt: updatedFolder.updatedAt,
+                  },
+                  folderName: folder.name,
+                  folderBackgroundUrl: updatedFolder.background?.imageUrl ?? "",
+                  errorMessage: null,
+                });
+                return refreshDecks();
+              })
+              .catch((error: unknown) =>
+                setState({
+                  errorMessage:
+                    error instanceof Error
+                      ? error.message
+                      : "Could not update folder background right now.",
+                }),
+              );
+          }}
         />
       ) : null}
     </>
@@ -615,11 +803,13 @@ function FolderCard({ folder, path, onOpen, onEdit }: FolderCardProps) {
         draggableRef(element);
         droppableRef(element);
       }}
-      className={`group relative flex min-h-24 w-96 shrink-0 flex-col justify-center rounded-2xl border bg-zinc-950 px-5 py-4 text-left transition hover:border-zinc-700 ${
+      className={`group relative flex min-h-24 w-96 shrink-0 flex-col justify-center overflow-hidden rounded-2xl border bg-zinc-950 px-5 py-4 text-left transition hover:border-zinc-700 ${
         isDropTarget ? "border-cyan-700/70" : "border-zinc-800"
       } ${isDragging ? "opacity-50" : "opacity-100"}`}
     >
-      <div className="pointer-events-none grid grid-cols-[1.75rem_1fr] items-center gap-x-3 gap-y-2 pr-24">
+      {folder.background ? <FolderBackgroundImage folder={folder} /> : null}
+      {folder.background ? <div className="absolute inset-0 bg-black/45" /> : null}
+      <div className="pointer-events-none relative z-10 grid grid-cols-[1.75rem_1fr] items-center gap-x-3 gap-y-2 pr-24">
         <Folder className="size-7 shrink-0 text-amber-300" strokeWidth={1.75} />
         <span className="truncate text-2xl font-semibold tracking-tight text-zinc-100">
           {folder.name}
@@ -662,22 +852,51 @@ function FolderCard({ folder, path, onOpen, onEdit }: FolderCardProps) {
   );
 }
 
+function FolderBackgroundImage({ folder }: { folder: FolderViewItem }) {
+  const background = folder.background;
+  if (!background) return null;
+
+  return (
+    <img
+      src={background.imageUrl}
+      alt=""
+      className={
+        background.crop
+          ? "object-fill opacity-85"
+          : "absolute inset-0 h-full w-full object-cover opacity-85"
+      }
+      style={background.crop ? getImageCropStyle(background.crop) : undefined}
+      loading="lazy"
+    />
+  );
+}
+
 function FolderSettingsModal({
   folder,
   folderName,
+  folderBackgroundUrl,
   showDeleteConfirm,
   onFolderNameChange,
+  onFolderBackgroundUrlChange,
   onClose,
   onRename,
+  onSaveBackground,
+  onClearBackground,
+  onEditBackgroundCrop,
   onDelete,
   onDeleteConfirmChange,
 }: {
   folder: EditableFolder;
   folderName: string;
+  folderBackgroundUrl: string;
   showDeleteConfirm: boolean;
   onFolderNameChange: (value: string) => void;
+  onFolderBackgroundUrlChange: (value: string) => void;
   onClose: () => void;
   onRename: (event: FormEvent<HTMLFormElement>) => void;
+  onSaveBackground: () => void;
+  onClearBackground: () => void;
+  onEditBackgroundCrop: () => void;
   onDelete: () => void;
   onDeleteConfirmChange: (showDeleteConfirm: boolean) => void;
 }) {
@@ -705,6 +924,37 @@ function FolderSettingsModal({
           </Button>
         </div>
       </form>
+
+      <div className="mt-5 rounded-xl border border-zinc-800 bg-zinc-900/40 p-4">
+        <label className="block text-sm font-medium text-zinc-400" htmlFor="folder-background-url">
+          Background image URL
+        </label>
+        <Input
+          id="folder-background-url"
+          value={folderBackgroundUrl}
+          onChange={(event) => onFolderBackgroundUrlChange(event.target.value)}
+          placeholder="https://cards.scryfall.io/..."
+          className="mt-3 w-full"
+        />
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Button onClick={onSaveBackground} className="flex-1">
+            <Image className="size-4" strokeWidth={1.75} />
+            Save background
+          </Button>
+          {folder.background ? (
+            <Button onClick={onEditBackgroundCrop} className="flex-1">
+              <Image className="size-4" strokeWidth={1.75} />
+              Edit crop
+            </Button>
+          ) : null}
+          {folder.background ? (
+            <Button onClick={onClearBackground} className="flex-1">
+              <ImageOff className="size-4" strokeWidth={1.75} />
+              Clear
+            </Button>
+          ) : null}
+        </div>
+      </div>
 
       {showDeleteConfirm ? (
         <div className="mt-5 rounded-xl border border-rose-900/40 bg-rose-950/20 p-4 text-sm text-rose-200">

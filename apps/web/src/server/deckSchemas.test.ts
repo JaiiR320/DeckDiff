@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { updateDeckColorsInputSchema, updateDeckCurrentInputSchema } from "./deckSchemas";
+import {
+  updateDeckColorsInputSchema,
+  updateDeckCoverInputSchema,
+  updateDeckCurrentInputSchema,
+  updateFolderBackgroundInputSchema,
+} from "./deckSchemas";
 
 describe("updateDeckCurrentInputSchema", () => {
   it("preserves enriched card data when persisting current deck state", () => {
@@ -63,5 +68,41 @@ describe("updateDeckColorsInputSchema", () => {
     expect(() =>
       updateDeckColorsInputSchema.parse({ deckId: "test-deck", colors: ["U", "C"] }),
     ).toThrow();
+  });
+});
+
+describe("updateDeckCoverInputSchema", () => {
+  it("accepts cover crop settings", () => {
+    expect(
+      updateDeckCoverInputSchema.parse({
+        deckId: "test-deck",
+        cover: {
+          oracleId: "oracle-1",
+          name: "Opt",
+          imageUrl: "normal.jpg",
+          source: "manual",
+          kind: "single",
+          crop: { x: 0, y: 0.2, width: 1, height: 0.5 },
+        },
+      }).cover,
+    ).toMatchObject({ crop: { x: 0, y: 0.2, width: 1, height: 0.5 } });
+  });
+});
+
+describe("updateFolderBackgroundInputSchema", () => {
+  it("accepts and clears folder backgrounds", () => {
+    expect(
+      updateFolderBackgroundInputSchema.parse({
+        folderId: "folder-1",
+        background: {
+          imageUrl: "https://cards.scryfall.io/normal/front/a/b/card.jpg",
+          crop: { x: 0.1, y: 0, width: 0.8, height: 0.2 },
+        },
+      }).background,
+    ).toMatchObject({ crop: { x: 0.1, y: 0, width: 0.8, height: 0.2 } });
+
+    expect(
+      updateFolderBackgroundInputSchema.parse({ folderId: "folder-1", background: null }),
+    ).toEqual({ folderId: "folder-1", background: null });
   });
 });

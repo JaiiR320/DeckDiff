@@ -109,8 +109,10 @@ export function EditorDeckStack({
 }: EditorDeckStackProps) {
   const previousLayout = useRef(layout);
   const generatedView = cardGroupView !== "categories";
-  const laneElements = useRef(new Map<number, HTMLDivElement>());
-  const categoryElements = useRef(new Map<CardCategory, HTMLElement>());
+  const laneElements = useRef<Map<number, HTMLDivElement>>(null!);
+  const categoryElements = useRef<Map<CardCategory, HTMLElement>>(null!);
+  laneElements.current ??= new Map<number, HTMLDivElement>();
+  categoryElements.current ??= new Map<CardCategory, HTMLElement>();
   const [dropPreview, setDropPreview] = useState<DropPreview | null>(null);
   const dropPreviewRef = useRef<DropPreview | null>(null);
   const [laneMenu, setLaneMenu] = useState<{ x: number; y: number; laneIndex: number } | null>(
