@@ -13,6 +13,17 @@ type SaveHistoryPanelProps = {
   onBackToEditor: () => void;
 };
 
+function formatDate(isoString: string) {
+  const date = new Date(isoString);
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 export function SaveHistoryPanel({
   deck,
   onLoadSave,
@@ -55,17 +66,6 @@ export function SaveHistoryPanel({
     if (saveA && saveB) {
       onCompareSaves(saveA, saveB);
     }
-  }
-
-  function formatDate(isoString: string) {
-    const date = new Date(isoString);
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
   }
 
   if (saves.length === 0) {

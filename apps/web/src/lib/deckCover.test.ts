@@ -89,6 +89,21 @@ describe("createCommanderDeckCover", () => {
     ).toMatchObject({ kind: "split", reversed: true });
   });
 
+  it("preserves commander cover crops when refreshing matching cards", () => {
+    expect(
+      createCommanderDeckCover([commanderCategory], [card()], {
+        source: "commander",
+        kind: "single",
+        oracleId: "oracle-1",
+        setCode: "TST",
+        collectorNumber: "1",
+        name: "Commander One",
+        imageUrl: "https://cards.example/one.jpg",
+        crop: { x: 0, y: 0.2, width: 1, height: 0.5 },
+      }),
+    ).toMatchObject({ crop: { x: 0, y: 0.2, width: 1, height: 0.5 } });
+  });
+
   it("ignores commander cards without images", () => {
     expect(
       createCommanderDeckCover([commanderCategory], [card({ imageUrl: undefined })]),

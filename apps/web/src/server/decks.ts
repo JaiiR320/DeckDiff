@@ -21,6 +21,7 @@ import {
   updateDeckCoverInputSchema,
   updateDeckColorsInputSchema,
   updateDeckCurrentInputSchema,
+  updateFolderBackgroundInputSchema,
   type CreateDeckInput,
   type CreateFolderInput,
   type DeleteDeckInput,
@@ -35,6 +36,7 @@ import {
   type UpdateDeckCoverInput,
   type UpdateDeckColorsInput,
   type UpdateDeckCurrentInput,
+  type UpdateFolderBackgroundInput,
 } from "./deckSchemas";
 
 async function requireUserId() {
@@ -58,6 +60,7 @@ function mapFolder(folder: FolderRow): DeckFolder {
     name: folder.name,
     slug: folder.slug,
     parentFolderId: folder.parentFolderId ?? undefined,
+    background: folder.background ?? undefined,
     sortOrder: folder.sortOrder,
     createdAt: folder.createdAt.toISOString(),
     updatedAt: folder.updatedAt.toISOString(),
@@ -422,6 +425,7 @@ export const createFolderForUser = createServerFn({ method: "POST" })
       parentFolderId,
       slug: await getUniqueFolderSlug(userId, parentFolderId, name),
       name,
+      background: null,
       sortOrder: maxSortOrder + 1,
       createdAt: now,
       updatedAt: now,
@@ -474,6 +478,23 @@ export const renameFolderForUser = createServerFn({ method: "POST" })
     await db
       .update(folders)
       .set({ name: nextName, slug: nextSlug, updatedAt: new Date() })
+      .where(eq(folders.id, folder.id));
+
+    const updatedFolder = await requireFolderForUser(userId, folder.id);
+    return mapFolder(updatedFolder);
+  });
+
+export const updateFolderBackgroundForUser = createServerFn({ method: "POST" })
+  .inputValidator((data: UpdateFolderBackgroundInput) =>
+    updateFolderBackgroundInputSchema.parse(data),
+  )
+  .handler(async ({ data }) => {
+    const userId = await requireUserId();
+    const folder = await requireFolderForUser(userId, data.folderId);
+
+    await db
+      .update(folders)
+      .set({ background: data.background, updatedAt: new Date() })
       .where(eq(folders.id, folder.id));
 
     const updatedFolder = await requireFolderForUser(userId, folder.id);

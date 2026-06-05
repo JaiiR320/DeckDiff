@@ -1,7 +1,10 @@
+import { useState } from "react";
+import { ImageCropModal } from "#/components/decks/ImageCropModal";
 import { ExportDeckModal } from "./modals/ExportDeckModal";
 import { ImportDeckModal } from "./modals/ImportDeckModal";
 import { SaveDeckModal } from "./modals/SaveDeckModal";
 import { DeckActionsModal } from "#/components/decks/DeckActionsModal";
+import type { DeckItem } from "#/lib/deck";
 import { swapSplitDeckCover } from "#/lib/deckCover";
 import {
   useDeckDetailModel,
@@ -15,6 +18,7 @@ export function DeckDetailModals() {
   const { defaultSaveLabel, exportPreview, hasCards } = useDeckDetailModel();
   const workspaceActions = useDeckWorkspaceActions();
   const { deckActions, deckImport } = useDeckDetailServices();
+  const [cropDeck, setCropDeck] = useState<DeckItem | null>(null);
 
   return (
     <>
@@ -69,6 +73,10 @@ export function DeckDetailModals() {
           onExport={deckActions.exportDeck}
           onColorsChange={(colors) => void deckActions.setDeckColors(colors)}
           onClearCover={() => void deckActions.setDeckCover(null)}
+          onEditCoverCrop={(deck) => {
+            setCropDeck(deck);
+            deckActions.setIsDeckActionsOpen(false);
+          }}
           onSwapSplitCover={(deck) =>
             void deckActions.setDeckCover(deck.cover ? swapSplitDeckCover(deck.cover) : null)
           }
@@ -80,6 +88,50 @@ export function DeckDetailModals() {
           onShowRemovedCardGhostsChange={
             compareMode ? undefined : workspaceActions.onSetShowRemovedCardGhosts
           }
+        />
+      ) : null}
+
+      {cropDeck?.cover ? (
+        <ImageCropModal
+          title="Edit cover crop"
+          aspectRatio={3 / 2}
+          images={
+            cropDeck.cover.kind === "split"
+              ? cropDeck.cover.cards.map((card, index) => ({
+                  id: String(index),
+                  name: card.name,
+                  imageUrl: card.imageUrl,
+                  crop: card.crop,
+                }))
+              : [
+                  {
+                    id: "single",
+                    name: cropDeck.cover.name,
+                    imageUrl: cropDeck.cover.imageUrl,
+                    crop: cropDeck.cover.crop,
+                  },
+                ]
+          }
+          onClose={() => setCropDeck(null)}
+          onSave={(cropDeckCrops) => {
+            if (!cropDeck.cover) return;
+
+            if (cropDeck.cover.kind === "split") {
+              const nextCards: typeof cropDeck.cover.cards = [
+                { ...cropDeck.cover.cards[0], crop: cropDeckCrops["0"] },
+                { ...cropDeck.cover.cards[1], crop: cropDeckCrops["1"] },
+              ];
+
+              void deckActions
+                .setDeckCover({ ...cropDeck.cover, cards: nextCards })
+                .then(() => setCropDeck(null));
+              return;
+            }
+
+            void deckActions
+              .setDeckCover({ ...cropDeck.cover, crop: cropDeckCrops.single })
+              .then(() => setCropDeck(null));
+          }}
         />
       ) : null}
     </>

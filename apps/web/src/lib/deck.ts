@@ -11,6 +11,18 @@ export type DeckStackLayout = {
   cardSortDirection?: DeckCardSortDirection;
 };
 
+export type ImageCrop = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
+export type FolderBackground = {
+  imageUrl: string;
+  crop?: ImageCrop;
+};
+
 export type DeckSave = {
   id: string; // crypto.randomUUID()
   savedAt: string; // ISO-8601
@@ -26,6 +38,7 @@ export type DeckTileCoverCard = {
   collectorNumber?: string;
   name: string;
   imageUrl: string;
+  crop?: ImageCrop;
 };
 
 type SingleDeckTileCover = DeckTileCoverCard & {
@@ -60,6 +73,7 @@ export type DeckFolder = {
   name: string;
   slug: string;
   parentFolderId?: string;
+  background?: FolderBackground;
   sortOrder: number;
   createdAt: string;
   updatedAt: string;

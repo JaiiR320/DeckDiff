@@ -1,15 +1,15 @@
 import { JudgeChat, type GetJudgeResponseInput } from "./JudgeChat";
 import { sendJudgeQuestionToBackend } from "#/server/judge";
 
-export function JudgePage() {
-  async function getResponse({ message }: GetJudgeResponseInput) {
-    return sendJudgeQuestionToBackend({
-      data: {
-        question: message,
-      },
-    });
-  }
+async function getResponse({ message }: GetJudgeResponseInput) {
+  return sendJudgeQuestionToBackend({
+    data: {
+      question: message,
+    },
+  });
+}
 
+export function JudgePage() {
   return (
     <main className="mx-auto w-full p-8">
       <section className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-6 shadow-2xl shadow-black/20">

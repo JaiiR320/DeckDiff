@@ -1,7 +1,8 @@
 import { Link } from "@tanstack/react-router";
 import { Layers, MoreVertical } from "lucide-react";
 import { IconButton } from "#/components/ui/IconButton";
-import type { DeckItem, DeckTileCover } from "../../lib/deck";
+import type { DeckItem, DeckTileCover, DeckTileCoverCard } from "../../lib/deck";
+import { getImageCropStyle } from "../../lib/imageCrop";
 
 type DeckCardProps = {
   deck: DeckItem;
@@ -103,7 +104,12 @@ function CoverImage({ cover }: { cover: DeckTileCover }) {
           <img
             src={leftCard.imageUrl}
             alt={leftCard.name}
-            className="absolute left-[-31%] top-[-40%] h-auto w-[142%] max-w-none"
+            className={
+              leftCard.crop
+                ? "object-fill"
+                : "absolute left-[-31%] top-[-40%] h-auto w-[142%] max-w-none"
+            }
+            style={leftCard.crop ? getImageCropStyle(leftCard.crop) : undefined}
             loading="lazy"
           />
         </div>
@@ -111,7 +117,12 @@ function CoverImage({ cover }: { cover: DeckTileCover }) {
           <img
             src={rightCard.imageUrl}
             alt={rightCard.name}
-            className="absolute right-[-31%] top-[-40%] h-auto w-[142%] max-w-none"
+            className={
+              rightCard.crop
+                ? "object-fill"
+                : "absolute right-[-31%] top-[-40%] h-auto w-[142%] max-w-none"
+            }
+            style={rightCard.crop ? getImageCropStyle(rightCard.crop) : undefined}
             loading="lazy"
           />
         </div>
@@ -119,11 +130,20 @@ function CoverImage({ cover }: { cover: DeckTileCover }) {
     );
   }
 
+  return <SingleCoverImage cover={cover} />;
+}
+
+function SingleCoverImage({ cover }: { cover: DeckTileCoverCard }) {
   return (
     <img
       src={cover.imageUrl}
       alt={cover.name}
-      className="absolute left-[-21%] top-[-40%] h-auto w-[142%] max-w-none opacity-85"
+      className={
+        cover.crop
+          ? "object-fill opacity-85"
+          : "absolute left-[-21%] top-[-40%] h-auto w-[142%] max-w-none opacity-85"
+      }
+      style={cover.crop ? getImageCropStyle(cover.crop) : undefined}
       loading="lazy"
     />
   );

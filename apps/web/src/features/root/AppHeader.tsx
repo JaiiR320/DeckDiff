@@ -6,14 +6,14 @@ import { authClient } from "#/lib/auth-client";
 const navLinkClass =
   "inline-flex items-center rounded-xl border px-4 py-2 text-sm font-medium transition";
 
+async function handleSignOut() {
+  await authClient.signOut();
+  window.location.assign("/auth");
+}
+
 export function AppHeader() {
   const location = useLocation();
   const { data: session, isPending } = authClient.useSession();
-
-  async function handleSignOut() {
-    await authClient.signOut();
-    window.location.assign("/auth");
-  }
 
   const isAuthPage = location.pathname === "/auth";
   const isDecksPage = location.pathname === "/decks";

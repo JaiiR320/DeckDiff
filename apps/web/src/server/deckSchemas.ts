@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { DeckColor, DeckStackLayout, DeckTileCover } from "#/lib/deck";
+import type { DeckColor, DeckStackLayout, DeckTileCover, FolderBackground } from "#/lib/deck";
 import {
   normalizeCategoryNameForCompare,
   type DeckCategory,
@@ -14,6 +14,10 @@ export type ListDeckFolderViewInput = { folderPath?: string };
 export type CreateFolderInput = { name: string; parentFolderId?: string | null };
 export type DeleteFolderInput = { folderId: string };
 export type RenameFolderInput = { folderId: string; newName: string };
+export type UpdateFolderBackgroundInput = {
+  folderId: string;
+  background: FolderBackground | null;
+};
 export type ReorderFoldersInput = { parentFolderId?: string | null; folderIds: string[] };
 export type MoveDeckToFolderInput = { deckId: string; folderId?: string | null };
 export type SaveDeckInput = {
@@ -95,6 +99,27 @@ const legacyCardCategorySchema = z.enum([
 ]);
 const deckColorSchema = z.enum(["W", "U", "B", "R", "G"]);
 
+const imageCropSchema = z
+  .object({
+    x: z.number().min(0).max(1),
+    y: z.number().min(0).max(1),
+    width: z.number().min(0.01).max(1),
+    height: z.number().min(0.01).max(1),
+  })
+  .refine((crop) => crop.x + crop.width <= 1.001 && crop.y + crop.height <= 1.001, {
+    message: "Crop must fit inside the image.",
+  });
+
+const folderBackgroundSchema = z.object({
+  imageUrl: z.string().min(1, "Background image URL is required."),
+  crop: imageCropSchema.optional(),
+});
+
+export const updateFolderBackgroundInputSchema = z.object({
+  folderId: z.string().trim().min(1, "Folder ID is required."),
+  background: folderBackgroundSchema.nullable(),
+});
+
 const deckCategorySchema = z.object({
   id: z.string().trim().min(1, "Category ID is required."),
   name: z.string().trim().min(1, "Category name is required."),
@@ -118,6 +143,7 @@ const deckTileCoverCardSchema = z.object({
   collectorNumber: z.string().trim().min(1, "Card collector number is required.").optional(),
   name: z.string().trim().min(1, "Cover name is required."),
   imageUrl: z.string().min(1, "Cover image URL is required."),
+  crop: imageCropSchema.optional(),
 });
 
 const singleDeckTileCoverSchema = deckTileCoverCardSchema.extend({
