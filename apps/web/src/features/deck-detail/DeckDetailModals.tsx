@@ -47,6 +47,7 @@ export function DeckDetailModals() {
           onToggleGroupByCategory={deckImport.toggleExportGroupByCategory}
           onToggleIncludeOutOfDeckCategories={deckImport.toggleExportIncludeOutOfDeckCategories}
           onToggleIncludeQuantity={deckImport.toggleExportQuantity}
+          onToggleSeparateSideboard={deckImport.toggleExportSeparateSideboard}
         />
       ) : null}
 

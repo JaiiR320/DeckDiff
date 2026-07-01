@@ -1,4 +1,8 @@
-import { mergeValidatedCards, type InvalidDeckCard, type ValidatedDeckCard } from "#/lib/decklist";
+import {
+  mergeValidatedCardEntries,
+  type InvalidDeckCard,
+  type ValidatedDeckCard,
+} from "#/lib/decklist";
 import type { DeckState } from "./types";
 
 export type ImportMode = "replace-empty" | "bulk-add" | "override";
@@ -28,7 +32,7 @@ export function applyValidatedDeckImport({
         status: "ready" as const,
         errorMessage: null,
       },
-      workingCards: mergeValidatedCards([...workingCards, ...validCards]),
+      workingCards: mergeValidatedCardEntries([...workingCards, ...validCards]),
     };
   }
 

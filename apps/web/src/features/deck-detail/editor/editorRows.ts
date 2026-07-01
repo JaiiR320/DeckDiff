@@ -1,9 +1,10 @@
 import {
   type CardCategory,
+  deckCardEntryKey,
   defaultDeckCategories,
   normalizeDeckCard,
   type DeckCategory,
-  mergeValidatedCards,
+  mergeValidatedCardEntries,
   type ValidatedDeckCard,
 } from "#/lib/decklist";
 import type { EditorRow } from "./types";
@@ -14,10 +15,10 @@ export function buildEditorRows(
   categories: DeckCategory[] = defaultDeckCategories(),
   baselineCategories: DeckCategory[] = categories,
 ) {
-  const baseline = mergeValidatedCards(
+  const baseline = mergeValidatedCardEntries(
     baselineCards.map((card) => normalizeDeckCard(card, baselineCategories)),
   );
-  const working = mergeValidatedCards(
+  const working = mergeValidatedCardEntries(
     workingCards.map((card) => normalizeDeckCard(card, categories)),
   );
   const categoryOrder = new Map(categories.map((category, index) => [category.id, index]));
@@ -79,10 +80,10 @@ export function buildAddedDeltaCards(
   categories: DeckCategory[] = defaultDeckCategories(),
   baselineCategories: DeckCategory[] = categories,
 ) {
-  const baseline = mergeValidatedCards(
+  const baseline = mergeValidatedCardEntries(
     baselineCards.map((card) => normalizeDeckCard(card, baselineCategories)),
   );
-  const working = mergeValidatedCards(
+  const working = mergeValidatedCardEntries(
     workingCards.map((card) => normalizeDeckCard(card, categories)),
   );
   const baselineById = new Map(baseline.map((card) => [diffCardKey(card), card]));
@@ -101,7 +102,7 @@ export function buildAddedDeltaCards(
 }
 
 function diffCardKey(card: ValidatedDeckCard) {
-  return `${card.categoryId ?? ""}\0${card.oracleId}`;
+  return deckCardEntryKey(card);
 }
 
 export function groupEditorRows(

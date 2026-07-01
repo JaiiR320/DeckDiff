@@ -30,6 +30,7 @@ export function useDeckImport({ deckState, editorActions }: UseDeckImportOptions
     includeQuantity: true,
     groupByCategory: false,
     includeOutOfDeckCategories: false,
+    separateSideboard: false,
     addedOnly: false,
   });
   const { baselineDeck, workingCards } = deckState;
@@ -92,7 +93,11 @@ export function useDeckImport({ deckState, editorActions }: UseDeckImportOptions
     toggleExportAddedOnly: () =>
       setExportOptions((current) => ({ ...current, addedOnly: !current.addedOnly })),
     toggleExportGroupByCategory: () =>
-      setExportOptions((current) => ({ ...current, groupByCategory: !current.groupByCategory })),
+      setExportOptions((current) => ({
+        ...current,
+        groupByCategory: !current.groupByCategory,
+        separateSideboard: current.groupByCategory ? current.separateSideboard : false,
+      })),
     toggleExportIncludeOutOfDeckCategories: () =>
       setExportOptions((current) => ({
         ...current,
@@ -100,6 +105,11 @@ export function useDeckImport({ deckState, editorActions }: UseDeckImportOptions
       })),
     toggleExportQuantity: () =>
       setExportOptions((current) => ({ ...current, includeQuantity: !current.includeQuantity })),
+    toggleExportSeparateSideboard: () =>
+      setExportOptions((current) => ({
+        ...current,
+        separateSideboard: !current.groupByCategory && !current.separateSideboard,
+      })),
   };
 }
 

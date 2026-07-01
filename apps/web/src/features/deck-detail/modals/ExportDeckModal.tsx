@@ -15,6 +15,7 @@ type ExportDeckModalProps = {
   onToggleGroupByCategory: () => void;
   onToggleIncludeOutOfDeckCategories: () => void;
   onToggleIncludeQuantity: () => void;
+  onToggleSeparateSideboard: () => void;
 };
 
 export function ExportDeckModal({
@@ -26,6 +27,7 @@ export function ExportDeckModal({
   onToggleGroupByCategory,
   onToggleIncludeOutOfDeckCategories,
   onToggleIncludeQuantity,
+  onToggleSeparateSideboard,
 }: ExportDeckModalProps) {
   return (
     <Modal ariaLabel="Close export modal" maxWidth="2xl" onClose={onClose} panelClassName="p-0">
@@ -62,6 +64,12 @@ export function ExportDeckModal({
             checked={exportOptions.includeOutOfDeckCategories}
             disabled={!exportOptions.groupByCategory}
             onToggle={onToggleIncludeOutOfDeckCategories}
+          />
+          <ToggleChip
+            label="Separate sideboard"
+            checked={exportOptions.separateSideboard}
+            disabled={exportOptions.groupByCategory}
+            onToggle={onToggleSeparateSideboard}
           />
         </div>
 

@@ -400,6 +400,7 @@ export function useDeckDetailController() {
         includeQuantity: deckImport.exportOptions.includeQuantity,
         groupByCategory: deckImport.exportOptions.groupByCategory,
         includeOutOfDeckCategories: deckImport.exportOptions.includeOutOfDeckCategories,
+        separateSideboard: deckImport.exportOptions.separateSideboard,
       })
     : null;
   const exportPreview = previewExport && previewExport.ok ? previewExport.text : "";
@@ -482,7 +483,7 @@ export function useDeckDetailController() {
     onMoveCardToCategory: (row: EditorRow, category: CardCategory) => {
       if (row.category === category || row.currentQuantity <= 0) return;
       requestDeckWorkspaceTransition((workspace) =>
-        deckWorkspaceTransitions.moveCardToCategory(workspace, row.oracleId, category),
+        deckWorkspaceTransitions.moveCardToCategory(workspace, row, category),
       );
     },
     onRemoveCategory: (category: CardCategory) =>

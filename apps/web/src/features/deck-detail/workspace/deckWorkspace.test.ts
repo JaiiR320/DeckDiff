@@ -161,7 +161,11 @@ describe("deckWorkspace", () => {
       deckItem({ current: snapshot("a", 1) }),
     );
 
-    const result = deckWorkspaceTransitions.moveCardToCategory(workspace, "a", "creature");
+    const result = deckWorkspaceTransitions.moveCardToCategory(
+      workspace,
+      editorRow("a", 1),
+      "creature",
+    );
 
     expect(result.workspace).toBe(workspace);
     expect(result.intent).toEqual({ kind: "none" });
@@ -345,7 +349,11 @@ describe("deckWorkspace", () => {
       deckItem({ current: snapshot("a", 1) }),
     );
 
-    const result = deckWorkspaceTransitions.moveCardToCategory(workspace, "a", "artifact");
+    const result = deckWorkspaceTransitions.moveCardToCategory(
+      workspace,
+      editorRow("a", 1),
+      "artifact",
+    );
 
     expect(result.workspace.current.workingCards[0]?.categoryId).toBe("artifact");
     expect(result.intent.kind).toBe("persist-current");

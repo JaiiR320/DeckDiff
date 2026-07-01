@@ -139,6 +139,10 @@ export type ValidatedDeckCard = {
   edhrecRank?: number | null;
 };
 
+export function deckCardEntryKey(card: Pick<ValidatedDeckCard, "oracleId" | "categoryId">) {
+  return `${card.categoryId ?? ""}\0${card.oracleId}`;
+}
+
 export type DeckExportOptions = {
   includeQuantity: boolean;
   includeSet: boolean;
@@ -146,6 +150,7 @@ export type DeckExportOptions = {
   setStyle: "brackets" | "parentheses";
   groupByCategory?: boolean;
   includeOutOfDeckCategories?: boolean;
+  separateSideboard?: boolean;
   deckName?: string;
   categories?: DeckCategory[];
 };
@@ -296,13 +301,34 @@ export function mergeValidatedCards(cards: ValidatedDeckCard[]) {
   return [...mergedCards.values()];
 }
 
-export function formatDecklist(cards: ValidatedDeckCard[], options: DeckExportOptions) {
-  const mergedCards = sortDeckCardsByName(mergeValidatedCards(cards));
+export function mergeValidatedCardEntries(cards: ValidatedDeckCard[]) {
+  const mergedCards = new Map<string, ValidatedDeckCard>();
 
-  if (options.groupByCategory) {
-    return formatGroupedDecklist(mergedCards, options);
+  for (const card of cards) {
+    const key = deckCardEntryKey(card);
+    const existingCard = mergedCards.get(key);
+
+    if (existingCard) {
+      existingCard.quantity += card.quantity;
+      continue;
+    }
+
+    mergedCards.set(key, { ...card });
   }
 
+  return [...mergedCards.values()];
+}
+
+export function formatDecklist(cards: ValidatedDeckCard[], options: DeckExportOptions) {
+  if (options.groupByCategory) {
+    return formatGroupedDecklist(cards, options);
+  }
+
+  if (options.separateSideboard) {
+    return formatDecklistWithSideboard(cards, options);
+  }
+
+  const mergedCards = sortDeckCardsByName(mergeValidatedCards(cards));
   return formatDeckCardRows(mergedCards, options).join("\n").trim();
 }
 
@@ -314,7 +340,7 @@ function formatGroupedDecklist(cards: ValidatedDeckCard[], options: DeckExportOp
     }
 
     const categoryCards = sortDeckCardsByName(
-      cards.filter((card) => card.categoryId === category.id),
+      mergeValidatedCards(cards.filter((card) => card.categoryId === category.id)),
     );
     if (categoryCards.length === 0) {
       return [];
@@ -324,6 +350,35 @@ function formatGroupedDecklist(cards: ValidatedDeckCard[], options: DeckExportOp
   });
 
   return [`# ${options.deckName ?? "Deck"}`, ...sections].join("\n\n").trim();
+}
+
+function formatDecklistWithSideboard(cards: ValidatedDeckCard[], options: DeckExportOptions) {
+  const categories = normalizeDeckCategories(options.categories);
+  const sideboardCategoryIds = new Set(
+    categories
+      .filter((category) => normalizeCategoryNameForCompare(category.name) === "sideboard")
+      .map((category) => category.id),
+  );
+
+  if (sideboardCategoryIds.size === 0) {
+    return formatDeckCardRows(sortDeckCardsByName(mergeValidatedCards(cards)), options)
+      .join("\n")
+      .trim();
+  }
+
+  const mainCards = sortDeckCardsByName(
+    mergeValidatedCards(cards.filter((card) => !sideboardCategoryIds.has(card.categoryId ?? ""))),
+  );
+  const sideboardCards = sortDeckCardsByName(
+    mergeValidatedCards(cards.filter((card) => sideboardCategoryIds.has(card.categoryId ?? ""))),
+  );
+  const sections = [formatDeckCardRows(mainCards, options).join("\n")];
+
+  if (sideboardCards.length > 0) {
+    sections.push(`Sideboard\n${formatDeckCardRows(sideboardCards, options).join("\n")}`);
+  }
+
+  return sections.filter(Boolean).join("\n\n").trim();
 }
 
 function formatDeckCardRows(cards: ValidatedDeckCard[], options: DeckExportOptions) {
