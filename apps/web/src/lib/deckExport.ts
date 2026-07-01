@@ -14,6 +14,7 @@ const DEFAULT_EXPORT_OPTIONS: DeckExportOptions = {
   setStyle: "brackets",
   groupByCategory: false,
   includeOutOfDeckCategories: false,
+  separateSideboard: false,
 };
 
 type DeckExportSource = {

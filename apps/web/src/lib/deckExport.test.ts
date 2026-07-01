@@ -19,6 +19,12 @@ const island: ValidatedDeckCard = {
   categoryId: "land",
 };
 
+const sideboardBolt: ValidatedDeckCard = {
+  ...lightningBolt,
+  quantity: 1,
+  categoryId: "sideboard",
+};
+
 function deck(overrides: Partial<DeckItem> = {}): DeckItem {
   return {
     id: "izzet-spells",
@@ -143,6 +149,58 @@ describe("Deck export", () => {
       ok: true,
       text: "# Izzet Spells!\n\n## Instant\n2 Lightning Bolt\n\n## Sideboard\n1 Island",
     });
+  });
+
+  it("separates sideboard in ungrouped exports", () => {
+    const result = createDeckExport(
+      deck({
+        cards: [lightningBolt, sideboardBolt, island],
+        categories: [
+          { id: "instant", name: "Instant", includeInDeck: true },
+          { id: "land", name: "Land", includeInDeck: true },
+          { id: "sideboard", name: "Sideboard", includeInDeck: true },
+        ],
+      }),
+      { separateSideboard: true },
+    );
+
+    expect(result).toMatchObject({
+      ok: true,
+      text: "1 Island\n2 Lightning Bolt\n\nSideboard\n1 Lightning Bolt",
+    });
+  });
+
+  it("ignores separate sideboard when grouped exports already separate categories", () => {
+    const result = createDeckExport(
+      deck({
+        cards: [lightningBolt, sideboardBolt],
+        categories: [
+          { id: "instant", name: "Instant", includeInDeck: true },
+          { id: "sideboard", name: "Sideboard", includeInDeck: true },
+        ],
+      }),
+      { groupByCategory: true, separateSideboard: true },
+    );
+
+    expect(result).toMatchObject({
+      ok: true,
+      text: "# Izzet Spells!\n\n## Instant\n2 Lightning Bolt\n\n## Sideboard\n1 Lightning Bolt",
+    });
+  });
+
+  it("omits excluded sideboards from separated exports", () => {
+    const result = createDeckExport(
+      deck({
+        cards: [lightningBolt, sideboardBolt],
+        categories: [
+          { id: "instant", name: "Instant", includeInDeck: true },
+          { id: "sideboard", name: "Sideboard", includeInDeck: false },
+        ],
+      }),
+      { separateSideboard: true },
+    );
+
+    expect(result).toMatchObject({ ok: true, text: "2 Lightning Bolt" });
   });
 
   it("supports quantity-free grouped exports", () => {

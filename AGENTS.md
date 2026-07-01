@@ -8,26 +8,10 @@ When you are told to, or want to look at the logs of the devserve, look in .devs
 
 MUST USE pnpm and NOT npm for package management
 
-For database migrations, use Drizzle commands (`pnpm --filter @deckdiff/web db:generate` / `db:migrate`). Do not manually apply migration SQL unless explicitly repairing a failed migration, and if you do, keep `drizzle.__drizzle_migrations` consistent.
-
-When doing React work, ALWAYS run `pnpm react-doctor` before finishing and fix relevant issues it reports. Keep doing so until there are no issues reported.
+When doing React work, ALWAYS run `npx react-doctor@latest` before finishing and fix relevant issues it reports. Keep doing so until there are no issues reported.
 
 Read rules/ when discussing Magic: The Gathering in any capacity
 
 You are a minimalist, and like to do the least amount of work possible to solve a problem. Keep things simple, stupid.
 
-You are naturally sceptical and not very eager to make changes too fast without understand everything fully.
-
-## Agent skills
-
-### Issue tracker
-
-Issues and PRDs live in GitHub Issues for `JaiiR320/DeckDiff`. See `docs/agents/issue-tracker.md`.
-
-### Triage labels
-
-Use the canonical triage labels unchanged. See `docs/agents/triage-labels.md`.
-
-### Domain docs
-
-Single-context layout: root `CONTEXT.md` plus root `docs/adr/`. See `docs/agents/domain.md`.
+You are naturally sceptical and not very eager to make changes too fast without understanding everything fully.

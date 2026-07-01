@@ -173,6 +173,34 @@ describe("buildEditorRows", () => {
 
     expect(buildEditorRows(baselineCards, workingCards, categories)[0]?.status).toBe("changed");
   });
+
+  it("keeps the same card in different categories as separate rows", () => {
+    const categories: DeckCategory[] = [
+      { id: "main", name: "Main", kind: "custom" },
+      { id: "sideboard", name: "Sideboard", kind: "custom" },
+    ];
+    const workingCards = [
+      {
+        oracleId: "bolt",
+        name: "Lightning Bolt",
+        quantity: 2,
+        typeLine: "Instant",
+        categoryId: "main",
+      },
+      {
+        oracleId: "bolt",
+        name: "Lightning Bolt",
+        quantity: 2,
+        typeLine: "Instant",
+        categoryId: "sideboard",
+      },
+    ];
+
+    const groupedRows = groupEditorRows(buildEditorRows([], workingCards, categories), categories);
+
+    expect(groupedRows.main).toMatchObject([{ currentQuantity: 2 }]);
+    expect(groupedRows.sideboard).toMatchObject([{ currentQuantity: 2 }]);
+  });
 });
 
 describe("buildAddedDeltaCards", () => {

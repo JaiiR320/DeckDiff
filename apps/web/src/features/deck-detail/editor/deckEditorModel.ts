@@ -1,7 +1,7 @@
 import type { DeckSave } from "#/lib/deck";
 import {
   type CardCategory,
-  mergeValidatedCards,
+  mergeValidatedCardEntries,
   normalizeDeckCategories,
   type DeckCategory,
   type ValidatedDeckCard,
@@ -34,7 +34,7 @@ export function buildDeckEditorModel({
   const compareWorkingCategories = compareSaves
     ? normalizeDeckCategories(compareSaves.saveB.categories)
     : categories;
-  const mergedWorkingCards = mergeValidatedCards(compareWorkingCards);
+  const mergedWorkingCards = mergeValidatedCardEntries(compareWorkingCards);
   const includedCategoryIds = new Set<CardCategory>();
   for (const category of compareWorkingCategories) {
     if (category.includeInDeck !== false) {

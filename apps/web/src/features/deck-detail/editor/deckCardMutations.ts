@@ -1,4 +1,4 @@
-import type { CardCategory, ValidatedDeckCard } from "#/lib/decklist";
+import { deckCardEntryKey, type CardCategory, type ValidatedDeckCard } from "#/lib/decklist";
 import type { CardPrintingOption, SearchCardResult } from "#/lib/scryfall";
 import type { EditorRow } from "./types";
 
@@ -7,7 +7,10 @@ export function appendSearchCard(
   card: SearchCardResult,
   categoryId: CardCategory,
 ) {
-  const existingIndex = cards.findIndex((existingCard) => existingCard.oracleId === card.oracleId);
+  const existingIndex = cards.findIndex(
+    (existingCard) =>
+      existingCard.oracleId === card.oracleId && existingCard.categoryId === categoryId,
+  );
 
   if (existingIndex !== -1) {
     return cards.map((existingCard, index) =>
@@ -40,7 +43,8 @@ export function appendSearchCard(
 }
 
 export function adjustCardQuantity(cards: ValidatedDeckCard[], row: EditorRow, delta: number) {
-  const currentIndex = cards.findIndex((card) => card.oracleId === row.oracleId);
+  const rowKey = editorRowEntryKey(row);
+  const currentIndex = cards.findIndex((card) => deckCardEntryKey(card) === rowKey);
 
   if (currentIndex === -1) {
     return delta <= 0
@@ -85,8 +89,10 @@ export function changeCardPrinting(
   row: EditorRow,
   printing: CardPrintingOption,
 ) {
+  const rowKey = editorRowEntryKey(row);
+
   return cards.map((card) =>
-    card.oracleId === row.oracleId && (!card.categoryId || card.categoryId === row.category)
+    deckCardEntryKey(card) === rowKey
       ? {
           ...card,
           name: printing.name,
@@ -102,4 +108,41 @@ export function changeCardPrinting(
         }
       : card,
   );
+}
+
+export function moveCardToCategory(
+  cards: ValidatedDeckCard[],
+  row: EditorRow,
+  categoryId: CardCategory,
+) {
+  const rowKey = editorRowEntryKey(row);
+  const sourceCard = cards.find((card) => deckCardEntryKey(card) === rowKey);
+
+  if (!sourceCard) {
+    return cards;
+  }
+
+  const targetKey = deckCardEntryKey({ ...sourceCard, categoryId });
+  let mergedIntoTarget = false;
+
+  return cards
+    .flatMap((card) => {
+      const cardKey = deckCardEntryKey(card);
+
+      if (cardKey === rowKey) {
+        return targetKey === rowKey ? [card] : [];
+      }
+
+      if (cardKey === targetKey) {
+        mergedIntoTarget = true;
+        return [{ ...card, quantity: card.quantity + sourceCard.quantity }];
+      }
+
+      return [card];
+    })
+    .concat(mergedIntoTarget || targetKey === rowKey ? [] : [{ ...sourceCard, categoryId }]);
+}
+
+function editorRowEntryKey(row: EditorRow) {
+  return deckCardEntryKey({ oracleId: row.oracleId, categoryId: row.category });
 }

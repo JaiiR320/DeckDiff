@@ -10,6 +10,7 @@ import {
   createCategoryId,
   createCategoryName,
   defaultDeckCategories,
+  mergeValidatedCardEntries,
   normalizeDeckCategories,
   type CardCategory,
   type DeckCategory,
@@ -22,6 +23,7 @@ import {
   adjustCardQuantity,
   appendSearchCard,
   changeCardPrinting,
+  moveCardToCategory as moveDeckCardToCategory,
 } from "../editor/deckCardMutations";
 import { applyValidatedDeckImport, type ImportMode } from "../editor/deckImport";
 import {
@@ -468,14 +470,12 @@ function removeEmptyCategory(
 
 function moveCardToCategory(
   workspace: DeckWorkspaceState,
-  oracleId: string,
+  row: EditorRow,
   categoryId: CardCategory,
 ): DeckWorkspaceTransitionResult {
   return editCurrentDecklist(workspace, (current) => ({
     ...current,
-    workingCards: current.workingCards.map((card) =>
-      card.oracleId === oracleId ? { ...card, categoryId } : card,
-    ),
+    workingCards: moveDeckCardToCategory(current.workingCards, row, categoryId),
   }));
 }
 
@@ -519,8 +519,10 @@ function moveAllCardsBetweenCategories(
 ): DeckWorkspaceTransitionResult {
   return editCurrentDecklist(workspace, (current) => ({
     ...current,
-    workingCards: current.workingCards.map((card) =>
-      card.categoryId === fromCategoryId ? { ...card, categoryId: toCategoryId } : card,
+    workingCards: mergeValidatedCardEntries(
+      current.workingCards.map((card) =>
+        card.categoryId === fromCategoryId ? { ...card, categoryId: toCategoryId } : card,
+      ),
     ),
   }));
 }

@@ -107,7 +107,10 @@ export function DeckActionsModal({
   onShowRemovedCardGhostsChange,
 }: DeckActionsModalProps) {
   const [state, setState] = useReducer(
-    (current: ModalState, next: Partial<ModalState>) => ({ ...current, ...next }),
+    (current: ModalState, next: Partial<ModalState>) => ({
+      ...current,
+      ...next,
+    }),
     initialModalState,
   );
   const {
@@ -153,7 +156,11 @@ export function DeckActionsModal({
 
     onCategoriesChange([
       ...categories,
-      { id: createCategoryId(trimmed, categories), name: trimmed, kind: "custom" },
+      {
+        id: createCategoryId(trimmed, categories),
+        name: trimmed,
+        kind: "custom",
+      },
     ]);
     setState({ newCategoryName: "" });
   }
@@ -297,6 +304,7 @@ function GeneralSettingsTab({
   setState: Dispatch<Partial<ModalState>>;
 }) {
   const [collapsedFolderIds, setCollapsedFolderIds] = useState<Set<string>>(() => new Set());
+  const [isMoveToFolderOpen, setIsMoveToFolderOpen] = useState(false);
   const folderHasChildren = new Set(
     folderOptions.flatMap((folder) => (folder.parentFolderId ? [folder.parentFolderId] : [])),
   );
@@ -304,6 +312,10 @@ function GeneralSettingsTab({
   const visibleFolderOptions = folderOptions.filter((folder) =>
     isFolderVisible(folder, foldersById, collapsedFolderIds),
   );
+  const currentFolderName = currentFolderId
+    ? (folderOptions.find((folder) => folder.id === currentFolderId)?.name ?? "Unknown folder")
+    : "Root";
+  const moveToFolderPanelId = `move-to-folder-panel-${deck.id}`;
 
   function toggleFolderCollapsed(folderId: string) {
     setCollapsedFolderIds((current) => {
@@ -388,69 +400,90 @@ function GeneralSettingsTab({
 
       {onMoveToFolder ? (
         <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-4">
-          <div className="mb-3 flex items-center gap-2 text-sm font-medium text-zinc-100">
-            <FolderInput className="size-5 text-zinc-500" strokeWidth={1.75} />
-            Move to folder
-          </div>
-          <div className="space-y-1 rounded-xl border border-zinc-800 bg-zinc-950/60 p-1">
-            <button
-              type="button"
-              disabled={!currentFolderId}
-              onClick={() => onMoveToFolder(deck.id, null)}
-              className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition disabled:cursor-default ${
-                currentFolderId
-                  ? "text-zinc-300 hover:bg-zinc-900 hover:text-zinc-100"
-                  : "bg-cyan-400 text-cyan-950"
-              }`}
+          <button
+            type="button"
+            aria-controls={moveToFolderPanelId}
+            aria-expanded={isMoveToFolderOpen}
+            onClick={() => setIsMoveToFolderOpen((isOpen) => !isOpen)}
+            className="flex w-full items-center justify-between gap-3 rounded-lg text-left text-sm transition hover:text-zinc-100"
+          >
+            <span className="flex min-w-0 items-center gap-2 font-medium text-zinc-100">
+              <FolderInput className="size-5 shrink-0 text-zinc-500" strokeWidth={1.75} />
+              <span>Move to folder</span>
+            </span>
+            <span className="flex min-w-0 items-center gap-2 text-zinc-400">
+              <span className="truncate">{currentFolderName}</span>
+              {isMoveToFolderOpen ? (
+                <ChevronDown className="size-4 shrink-0" strokeWidth={1.75} />
+              ) : (
+                <ChevronRight className="size-4 shrink-0" strokeWidth={1.75} />
+              )}
+            </span>
+          </button>
+          {isMoveToFolderOpen ? (
+            <div
+              id={moveToFolderPanelId}
+              className="mt-3 space-y-1 rounded-xl border border-zinc-800 bg-zinc-950/60 p-1"
             >
-              <FolderInput className="size-4" strokeWidth={1.75} />
-              <span>Root</span>
-            </button>
-            {visibleFolderOptions.map((folder) => {
-              const hasChildren = folderHasChildren.has(folder.id);
-              const isCollapsed = collapsedFolderIds.has(folder.id);
-              const isCurrent = currentFolderId === folder.id;
+              <button
+                type="button"
+                disabled={!currentFolderId}
+                onClick={() => onMoveToFolder(deck.id, null)}
+                className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition disabled:cursor-default ${
+                  currentFolderId
+                    ? "text-zinc-300 hover:bg-zinc-900 hover:text-zinc-100"
+                    : "bg-cyan-400 text-cyan-950"
+                }`}
+              >
+                <FolderInput className="size-4" strokeWidth={1.75} />
+                <span>Root</span>
+              </button>
+              {visibleFolderOptions.map((folder) => {
+                const hasChildren = folderHasChildren.has(folder.id);
+                const isCollapsed = collapsedFolderIds.has(folder.id);
+                const isCurrent = currentFolderId === folder.id;
 
-              return (
-                <div
-                  key={folder.id}
-                  className={`flex items-center rounded-lg text-sm transition ${
-                    isCurrent
-                      ? "bg-cyan-400 text-cyan-950"
-                      : "text-zinc-300 hover:bg-zinc-900 hover:text-zinc-100"
-                  }`}
-                  style={{ paddingLeft: `${8 + folder.depth * 20}px` }}
-                >
-                  {hasChildren ? (
+                return (
+                  <div
+                    key={folder.id}
+                    className={`flex items-center rounded-lg text-sm transition ${
+                      isCurrent
+                        ? "bg-cyan-400 text-cyan-950"
+                        : "text-zinc-300 hover:bg-zinc-900 hover:text-zinc-100"
+                    }`}
+                    style={{ paddingLeft: `${8 + folder.depth * 20}px` }}
+                  >
+                    {hasChildren ? (
+                      <button
+                        type="button"
+                        onClick={() => toggleFolderCollapsed(folder.id)}
+                        className="flex size-8 shrink-0 items-center justify-center rounded-md transition hover:bg-black/10"
+                        aria-label={`${isCollapsed ? "Expand" : "Collapse"} ${folder.name}`}
+                      >
+                        {isCollapsed ? (
+                          <ChevronRight className="size-4" strokeWidth={1.75} />
+                        ) : (
+                          <ChevronDown className="size-4" strokeWidth={1.75} />
+                        )}
+                      </button>
+                    ) : (
+                      <span className="size-8 shrink-0" />
+                    )}
                     <button
                       type="button"
-                      onClick={() => toggleFolderCollapsed(folder.id)}
-                      className="flex size-8 shrink-0 items-center justify-center rounded-md transition hover:bg-black/10"
-                      aria-label={`${isCollapsed ? "Expand" : "Collapse"} ${folder.name}`}
+                      disabled={isCurrent}
+                      onClick={() => onMoveToFolder(deck.id, folder.id)}
+                      className="flex min-w-0 flex-1 items-center gap-2 rounded-lg py-2 pr-3 text-left disabled:cursor-default"
+                      title={folder.path}
                     >
-                      {isCollapsed ? (
-                        <ChevronRight className="size-4" strokeWidth={1.75} />
-                      ) : (
-                        <ChevronDown className="size-4" strokeWidth={1.75} />
-                      )}
+                      <Folder className="size-4 shrink-0" strokeWidth={1.75} />
+                      <span className="truncate">{folder.name}</span>
                     </button>
-                  ) : (
-                    <span className="size-8 shrink-0" />
-                  )}
-                  <button
-                    type="button"
-                    disabled={isCurrent}
-                    onClick={() => onMoveToFolder(deck.id, folder.id)}
-                    className="flex min-w-0 flex-1 items-center gap-2 rounded-lg py-2 pr-3 text-left disabled:cursor-default"
-                    title={folder.path}
-                  >
-                    <Folder className="size-4 shrink-0" strokeWidth={1.75} />
-                    <span className="truncate">{folder.name}</span>
-                  </button>
-                </div>
-              );
-            })}
-          </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : null}
         </div>
       ) : null}
 
@@ -755,7 +788,10 @@ function CategorySettingsRow({
             />
             <Button
               onClick={() =>
-                setState({ renamingCategoryId: category.id, categoryName: category.name })
+                setState({
+                  renamingCategoryId: category.id,
+                  categoryName: category.name,
+                })
               }
               size="sm"
               className="rounded-lg py-1.5"

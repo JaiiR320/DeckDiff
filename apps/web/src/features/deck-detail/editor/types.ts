@@ -43,5 +43,6 @@ export type ExportModalState = {
   includeQuantity: boolean;
   groupByCategory: boolean;
   includeOutOfDeckCategories: boolean;
+  separateSideboard: boolean;
   addedOnly: boolean;
 };
