@@ -354,11 +354,13 @@ function formatGroupedDecklist(cards: ValidatedDeckCard[], options: DeckExportOp
 
 function formatDecklistWithSideboard(cards: ValidatedDeckCard[], options: DeckExportOptions) {
   const categories = normalizeDeckCategories(options.categories);
-  const sideboardCategoryIds = new Set(
-    categories
-      .filter((category) => normalizeCategoryNameForCompare(category.name) === "sideboard")
-      .map((category) => category.id),
-  );
+  const sideboardCategoryIds = new Set<string>();
+
+  for (const category of categories) {
+    if (normalizeCategoryNameForCompare(category.name) === "sideboard") {
+      sideboardCategoryIds.add(category.id);
+    }
+  }
 
   if (sideboardCategoryIds.size === 0) {
     return formatDeckCardRows(sortDeckCardsByName(mergeValidatedCards(cards)), options)
