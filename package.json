@@ -7,7 +7,7 @@
     "check": "pnpm -r check",
     "dev:api": "pnpm --filter @deckdiff/api dev",
     "dev:web": "pnpm --filter @deckdiff/web dev",
-    "react-doctor": "pnpm dlx react-doctor@latest --project @deckdiff/web --full --verbose --no-score --fail-on none",
+    "react-doctor": "pnpm dlx react-doctor@latest --project @deckdiff/web --scope full --verbose --no-score --fail-on none",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
     "fmt": "oxfmt",
