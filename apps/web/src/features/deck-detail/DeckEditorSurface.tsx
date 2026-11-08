@@ -1,3 +1,5 @@
+import { Card } from "@jaiir320/design-system/components/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@jaiir320/design-system/components/tabs";
 import { useMemo, useState } from "react";
 import { EditorHeader } from "./components/EditorHeader";
 import { SaveHistoryPanel } from "./components/SaveHistoryPanel";
@@ -10,9 +12,9 @@ import {
   useDeckWorkspaceActions,
   useDeckWorkspaceView,
 } from "./deckDetailContext";
+import type { DeckDetailTab } from "./deckDetailContext";
 import type { CardGroupView } from "./stack/cardGroupView";
 import { StackEditor } from "./StackEditor";
-import { TabButton } from "./TabButton";
 
 export function DeckEditorSurface() {
   const { baselineDeck, compareMode, deck, redoStack, stackLayout, undoStack } =
@@ -70,53 +72,47 @@ export function DeckEditorSurface() {
   );
 
   return (
-    <section className="rounded-2xl border border-zinc-800 bg-zinc-950 shadow-[0_24px_60px_rgba(0,0,0,0.2)]">
-      <div className="flex border-b border-zinc-800">
-        <TabButton
-          active={activeTab === "editor"}
-          onClick={() => deckUiActions.onSetActiveTab("editor")}
-        >
-          Editor
-        </TabButton>
-        <TabButton
-          active={activeTab === "history"}
-          onClick={() => deckUiActions.onSetActiveTab("history")}
-        >
-          History
-        </TabButton>
-        <TabButton
-          active={activeTab === "stats"}
-          onClick={() => deckUiActions.onSetActiveTab("stats")}
-        >
-          Stats
-        </TabButton>
-        {compareMode ? (
-          <div className="ml-auto flex items-center gap-2 px-4">
-            <span className="text-sm text-cyan-400">Comparing snapshots</span>
-            <button
-              type="button"
-              onClick={deckActions.exitCompareMode}
-              className="text-sm text-zinc-500 hover:text-zinc-300"
-            >
-              Exit
-            </button>
-          </div>
-        ) : null}
-      </div>
+    <Card variant="panel" render={<section />}>
+      <Tabs
+        value={activeTab}
+        onValueChange={(value: DeckDetailTab) => deckUiActions.onSetActiveTab(value)}
+      >
+        <div className="flex border-b border-border">
+          <TabsList aria-label="Deck views">
+            <TabsTrigger value="editor">Editor</TabsTrigger>
+            <TabsTrigger value="history">History</TabsTrigger>
+            <TabsTrigger value="stats">Stats</TabsTrigger>
+          </TabsList>
+          {compareMode ? (
+            <div className="ml-auto flex items-center gap-2 px-4">
+              <span className="text-sm text-primary">Comparing snapshots</span>
+              <button
+                type="button"
+                onClick={deckActions.exitCompareMode}
+                className="text-muted-foreground hover:text-secondary-foreground"
+              >
+                Exit
+              </button>
+            </div>
+          ) : null}
+        </div>
 
-      {activeTab === "editor" ? (
-        <StackEditor cardGroupView={cardGroupView} searchToolbar={searchToolbar} />
-      ) : activeTab === "history" ? (
-        <SaveHistoryPanel
-          deck={deck}
-          onLoadSave={(save) => void deckActions.loadSave(save)}
-          onSaveSnapshotBeforeLoad={deckActions.saveSnapshotBeforeLoad}
-          onCompareSaves={deckActions.compareSaves}
-          onBackToEditor={() => deckUiActions.onSetActiveTab("editor")}
-        />
-      ) : (
-        <DeckStatsPanel />
-      )}
-    </section>
+        <TabsContent value="editor">
+          <StackEditor cardGroupView={cardGroupView} searchToolbar={searchToolbar} />
+        </TabsContent>
+        <TabsContent value="history">
+          <SaveHistoryPanel
+            deck={deck}
+            onLoadSave={(save) => void deckActions.loadSave(save)}
+            onSaveSnapshotBeforeLoad={deckActions.saveSnapshotBeforeLoad}
+            onCompareSaves={deckActions.compareSaves}
+            onBackToEditor={() => deckUiActions.onSetActiveTab("editor")}
+          />
+        </TabsContent>
+        <TabsContent value="stats">
+          <DeckStatsPanel />
+        </TabsContent>
+      </Tabs>
+    </Card>
   );
 }

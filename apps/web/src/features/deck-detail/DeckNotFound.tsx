@@ -1,3 +1,4 @@
+import { buttonVariants } from "@jaiir320/design-system/components/button";
 import { Link } from "@tanstack/react-router";
 
 export function DeckNotFound() {
@@ -7,11 +8,15 @@ export function DeckNotFound() {
         <Link
           to="/decks"
           search={{ folder: undefined }}
-          className="rounded-xl border border-zinc-800 px-3 py-2 text-sm text-zinc-400 transition hover:border-zinc-700 hover:text-zinc-200"
+          className={buttonVariants({
+            size: "sm",
+            className:
+              "text-sm text-subtle-foreground hover:bg-transparent hover:text-strong-foreground",
+          })}
         >
           Back
         </Link>
-        <p className="text-sm text-zinc-500">Deck not found.</p>
+        <p className="text-sm text-muted-foreground">Deck not found.</p>
       </div>
     </main>
   );

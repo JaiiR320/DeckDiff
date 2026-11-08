@@ -1,6 +1,6 @@
+import { Alert, AlertDescription } from "@jaiir320/design-system/components/alert";
+import { Button } from "@jaiir320/design-system/components/button";
 import { X } from "lucide-react";
-import { Alert } from "#/components/ui/Alert";
-import { IconButton } from "#/components/ui/IconButton";
 import type { DeckState } from "../editor/types";
 
 type DeckAlertsProps = {
@@ -18,33 +18,36 @@ export function DeckAlerts({ deck, onDismissWarnings }: DeckAlertsProps) {
 
   return (
     <div className="space-y-4 px-5 pb-2 pt-5">
-      {hasError ? (
-        <Alert tone="danger" className="border-rose-900/60 bg-rose-950/40 p-4">
-          {deck.errorMessage}
-        </Alert>
-      ) : null}
+      {hasError ? <Alert className="bg-destructive-surface/40">{deck.errorMessage}</Alert> : null}
 
       {hasWarnings ? (
-        <Alert as="section" tone="warning" className="p-4">
+        <Alert tone="warning" render={<section aria-labelledby="deck-warnings-title" />}>
           <div className="flex items-start justify-between gap-4">
-            <h3 className="text-sm font-semibold text-amber-200">Warnings</h3>
-            <IconButton
+            <h3
+              id="deck-warnings-title"
+              className="text-sm font-semibold text-warning-muted-foreground"
+            >
+              Warnings
+            </h3>
+            <Button
               onClick={onDismissWarnings}
-              variant="warning"
-              size="sm"
+              variant="warning-ghost"
+              size="icon-sm"
               aria-label="Dismiss warnings"
             >
               <X className="size-4" />
-            </IconButton>
+            </Button>
           </div>
-          <ul className="mt-3 space-y-2 text-sm text-amber-100/90">
-            {deck.invalidCards.map((card) => (
-              <li key={`${card.lineNumber}-${card.name}`}>
-                <span className="font-medium">Line {card.lineNumber}:</span> {card.name}{" "}
-                <span className="text-amber-300">{card.reason}</span>
-              </li>
-            ))}
-          </ul>
+          <AlertDescription className="mt-3">
+            <ul className="space-y-2 text-sm text-amber-100/90">
+              {deck.invalidCards.map((card) => (
+                <li key={`${card.lineNumber}-${card.name}`}>
+                  <span className="font-medium">Line {card.lineNumber}:</span> {card.name}{" "}
+                  <span className="text-warning-text">{card.reason}</span>
+                </li>
+              ))}
+            </ul>
+          </AlertDescription>
         </Alert>
       ) : null}
     </div>

@@ -1,5 +1,6 @@
+import { Badge } from "@jaiir320/design-system/components/badge";
+import { Button } from "@jaiir320/design-system/components/button";
 import { Save, Settings } from "lucide-react";
-import { Button } from "#/components/ui/Button";
 import type { DeckItem } from "#/lib/deck";
 
 type DeckDetailHeaderProps = {
@@ -20,11 +21,11 @@ export function DeckDetailHeader({
   return (
     <div className="mb-8 flex items-center justify-between gap-4">
       <div className="flex items-center gap-4">
-        <h1 className="text-3xl font-semibold tracking-tight text-zinc-100">{deckName}</h1>
+        <h1 className="text-3xl font-semibold tracking-tight text-foreground">{deckName}</h1>
         {deck.saves.length > 0 && (
-          <span className="rounded-lg bg-zinc-900 px-2 py-1 text-sm text-zinc-500">
+          <Badge>
             {deck.saves.length} snapshot{deck.saves.length === 1 ? "" : "s"}
-          </span>
+          </Badge>
         )}
       </div>
 
@@ -33,12 +34,7 @@ export function DeckDetailHeader({
           <Settings className="size-4" strokeWidth={1.75} />
           Settings
         </Button>
-        <Button
-          onClick={onOpenSave}
-          disabled={!canSave}
-          variant="primary"
-          className="disabled:opacity-50"
-        >
+        <Button onClick={onOpenSave} disabled={!canSave} variant="default">
           <Save className="size-4" strokeWidth={1.75} />
           Save
         </Button>
