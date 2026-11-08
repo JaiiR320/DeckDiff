@@ -320,7 +320,7 @@ export const listDecks = createServerFn({ method: "GET" }).handler(async () => {
 });
 
 export const listDeckFolderView = createServerFn({ method: "GET" })
-  .inputValidator((data: ListDeckFolderViewInput) => listDeckFolderViewInputSchema.parse(data))
+  .validator((data: ListDeckFolderViewInput) => listDeckFolderViewInputSchema.parse(data))
   .handler(async ({ data }) => {
     const userId = await requireUserId();
     const allFolders = await db
@@ -406,7 +406,7 @@ export const listDeckFolderView = createServerFn({ method: "GET" })
   });
 
 export const createFolderForUser = createServerFn({ method: "POST" })
-  .inputValidator((data: CreateFolderInput) => createFolderInputSchema.parse(data))
+  .validator((data: CreateFolderInput) => createFolderInputSchema.parse(data))
   .handler(async ({ data }) => {
     const userId = await requireUserId();
     const name = data.name.trim();
@@ -436,7 +436,7 @@ export const createFolderForUser = createServerFn({ method: "POST" })
   });
 
 export const deleteFolderForUser = createServerFn({ method: "POST" })
-  .inputValidator((data: DeleteFolderInput) => deleteFolderInputSchema.parse(data))
+  .validator((data: DeleteFolderInput) => deleteFolderInputSchema.parse(data))
   .handler(async ({ data }) => {
     const userId = await requireUserId();
     const folder = await requireFolderForUser(userId, data.folderId);
@@ -463,7 +463,7 @@ export const deleteFolderForUser = createServerFn({ method: "POST" })
   });
 
 export const renameFolderForUser = createServerFn({ method: "POST" })
-  .inputValidator((data: RenameFolderInput) => renameFolderInputSchema.parse(data))
+  .validator((data: RenameFolderInput) => renameFolderInputSchema.parse(data))
   .handler(async ({ data }) => {
     const userId = await requireUserId();
     const folder = await requireFolderForUser(userId, data.folderId);
@@ -485,7 +485,7 @@ export const renameFolderForUser = createServerFn({ method: "POST" })
   });
 
 export const updateFolderBackgroundForUser = createServerFn({ method: "POST" })
-  .inputValidator((data: UpdateFolderBackgroundInput) =>
+  .validator((data: UpdateFolderBackgroundInput) =>
     updateFolderBackgroundInputSchema.parse(data),
   )
   .handler(async ({ data }) => {
@@ -502,7 +502,7 @@ export const updateFolderBackgroundForUser = createServerFn({ method: "POST" })
   });
 
 export const reorderFoldersForUser = createServerFn({ method: "POST" })
-  .inputValidator((data: ReorderFoldersInput) => reorderFoldersInputSchema.parse(data))
+  .validator((data: ReorderFoldersInput) => reorderFoldersInputSchema.parse(data))
   .handler(async ({ data }) => {
     const userId = await requireUserId();
     const parentFolderId = data.parentFolderId ?? null;
@@ -534,7 +534,7 @@ export const reorderFoldersForUser = createServerFn({ method: "POST" })
   });
 
 export const moveDeckToFolderForUser = createServerFn({ method: "POST" })
-  .inputValidator((data: MoveDeckToFolderInput) => moveDeckToFolderInputSchema.parse(data))
+  .validator((data: MoveDeckToFolderInput) => moveDeckToFolderInputSchema.parse(data))
   .handler(async ({ data }) => {
     const userId = await requireUserId();
     const folderId = data.folderId ?? null;
@@ -560,14 +560,14 @@ export const moveDeckToFolderForUser = createServerFn({ method: "POST" })
   });
 
 export const getDeck = createServerFn({ method: "GET" })
-  .inputValidator((data: GetDeckInput) => deckIdSchema.parse(data))
+  .validator((data: GetDeckInput) => deckIdSchema.parse(data))
   .handler(async ({ data }) => {
     const userId = await requireUserId();
     return getDeckWithSavesBySlug(userId, data.deckId);
   });
 
 export const createDeckForUser = createServerFn({ method: "POST" })
-  .inputValidator((data: CreateDeckInput) => createDeckInputSchema.parse(data))
+  .validator((data: CreateDeckInput) => createDeckInputSchema.parse(data))
   .handler(async ({ data }) => {
     const userId = await requireUserId();
     const name = data.name.trim();
@@ -602,7 +602,7 @@ export const createDeckForUser = createServerFn({ method: "POST" })
   });
 
 export const renameDeckForUser = createServerFn({ method: "POST" })
-  .inputValidator((data: RenameDeckInput) => renameDeckInputSchema.parse(data))
+  .validator((data: RenameDeckInput) => renameDeckInputSchema.parse(data))
   .handler(async ({ data }) => {
     const userId = await requireUserId();
     const nextName = data.newName.trim();
@@ -634,7 +634,7 @@ export const renameDeckForUser = createServerFn({ method: "POST" })
   });
 
 export const deleteDeckForUser = createServerFn({ method: "POST" })
-  .inputValidator((data: DeleteDeckInput) => deckIdSchema.parse(data))
+  .validator((data: DeleteDeckInput) => deckIdSchema.parse(data))
   .handler(async ({ data }) => {
     const userId = await requireUserId();
 
@@ -651,7 +651,7 @@ export const deleteDeckForUser = createServerFn({ method: "POST" })
   });
 
 export const saveDeckForUser = createServerFn({ method: "POST" })
-  .inputValidator((data: SaveDeckInput) => saveDeckInputSchema.parse(data))
+  .validator((data: SaveDeckInput) => saveDeckInputSchema.parse(data))
   .handler(async ({ data }) => {
     const userId = await requireUserId();
 
@@ -691,7 +691,7 @@ export const saveDeckForUser = createServerFn({ method: "POST" })
   });
 
 export const updateDeckCurrentForUser = createServerFn({ method: "POST" })
-  .inputValidator((data: UpdateDeckCurrentInput) => updateDeckCurrentInputSchema.parse(data))
+  .validator((data: UpdateDeckCurrentInput) => updateDeckCurrentInputSchema.parse(data))
   .handler(async ({ data }) => {
     const userId = await requireUserId();
 
@@ -722,7 +722,7 @@ export const updateDeckCurrentForUser = createServerFn({ method: "POST" })
   });
 
 export const updateDeckCoverForUser = createServerFn({ method: "POST" })
-  .inputValidator((data: UpdateDeckCoverInput) => updateDeckCoverInputSchema.parse(data))
+  .validator((data: UpdateDeckCoverInput) => updateDeckCoverInputSchema.parse(data))
   .handler(async ({ data }) => {
     const userId = await requireUserId();
 
@@ -746,7 +746,7 @@ export const updateDeckCoverForUser = createServerFn({ method: "POST" })
   });
 
 export const updateDeckColorsForUser = createServerFn({ method: "POST" })
-  .inputValidator((data: UpdateDeckColorsInput) => updateDeckColorsInputSchema.parse(data))
+  .validator((data: UpdateDeckColorsInput) => updateDeckColorsInputSchema.parse(data))
   .handler(async ({ data }) => {
     const userId = await requireUserId();
 

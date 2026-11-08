@@ -14,7 +14,7 @@ type CreateIssueResult = {
 };
 
 export const createGithubIssue = createServerFn({ method: "POST" })
-  .inputValidator((data: CreateIssuePayload) => data)
+  .validator((data: CreateIssuePayload) => data)
   .handler(async ({ data }) => {
     const token = process.env.GITHUB_TOKEN;
     if (!token) throw new Error("GITHUB_TOKEN is not configured.");
