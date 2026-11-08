@@ -1,6 +1,26 @@
 import { X } from "lucide-react";
-import { useEffect, useReducer, useState } from "react";
-import { DropdownSelect } from "#/components/ui/DropdownSelect";
+import { useEffect, useReducer, useRef, useState } from "react";
+import { Alert } from "@jaiir320/design-system/components/alert";
+import { Badge } from "@jaiir320/design-system/components/badge";
+import { Button } from "@jaiir320/design-system/components/button";
+import {
+  Dialog,
+  DialogBody,
+  DialogClose,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@jaiir320/design-system/components/dialog";
+import { Empty } from "@jaiir320/design-system/components/empty";
+import { Field, FieldLabel } from "@jaiir320/design-system/components/field";
+import { Input } from "@jaiir320/design-system/components/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@jaiir320/design-system/components/select";
 import { getCardPrintings, type CardPrintingOption } from "#/lib/scryfall";
 import type { EditorRow } from "../editor/types";
 import { PRINTING_SORT_OPTIONS, sortPrintings, type PrintingSort } from "./printingSort";
@@ -20,6 +40,7 @@ type PrintingsState = {
 export function PrintingPickerModal({ row, onClose, onSelect }: PrintingPickerModalProps) {
   const [filter, setFilter] = useState("");
   const [sort, setSort] = useState<PrintingSort>("date");
+  const popupRef = useRef<HTMLDivElement>(null);
   const [printingsState, setPrintingsState] = useReducer(
     (current: PrintingsState, next: Partial<PrintingsState>) => ({ ...current, ...next }),
     { oracleId: "", printings: [], status: "loading" },
@@ -42,15 +63,6 @@ export function PrintingPickerModal({ row, onClose, onSelect }: PrintingPickerMo
     };
   }, [row.oracleId]);
 
-  useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") onClose();
-    }
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
-
   const visiblePrintings = sortPrintings(
     printings.filter((printing) =>
       printing.setName.toLowerCase().includes(filter.trim().toLowerCase()),
@@ -59,113 +71,141 @@ export function PrintingPickerModal({ row, onClose, onSelect }: PrintingPickerMo
   );
 
   return (
-    <div className="fixed inset-0 z-[1200] overflow-y-auto overscroll-contain bg-black/80 px-4 py-5 backdrop-blur-sm sm:px-6">
-      <button
-        type="button"
-        aria-label="Close printing picker"
-        className="fixed inset-0 cursor-default"
-        onClick={onClose}
-      />
-      <div className="relative z-10 mx-auto max-w-7xl">
-        <div className="mb-5 flex items-start justify-between gap-4">
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent ref={popupRef} tabIndex={-1} initialFocus={popupRef} size="screen">
+        <DialogHeader className="mb-5">
           <div className="min-w-0 flex-1">
-            <h2 className="text-2xl font-semibold text-zinc-100">Select a printing</h2>
+            <DialogTitle className="text-2xl">Select a printing</DialogTitle>
             <div className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,360px)_170px]">
-              <label className="block" htmlFor="printing-set-filter">
-                <span className="text-sm font-semibold text-zinc-200">Search printings…</span>
-                <input
+              <Field className="block">
+                {/* Inherited 16/24 line box around the smaller label keeps the old spacing. */}
+                <FieldLabel className="text-base">
+                  <span className="text-sm font-semibold text-strong-foreground">
+                    Search printings…
+                  </span>
+                </FieldLabel>
+                <Input
                   id="printing-set-filter"
                   aria-label="Search printings by set name"
+                  inputSize="xs"
                   value={filter}
                   onChange={(event) => setFilter(event.target.value)}
                   placeholder="Filter set name"
-                  className="mt-1 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none transition placeholder:text-zinc-500 focus:border-cyan-500"
+                  className="mt-1 border-border-strong placeholder:text-muted-foreground"
                 />
-              </label>
+              </Field>
               <div>
-                <span className="text-sm font-semibold text-zinc-200">Order by</span>
-                <DropdownSelect
+                <span className="text-sm font-semibold text-strong-foreground">Order by</span>
+                <Select
+                  items={PRINTING_SORT_OPTIONS}
                   value={sort}
-                  options={PRINTING_SORT_OPTIONS}
-                  onChange={setSort}
-                  aria-label="Order printings by"
-                  className="mt-1 w-full"
-                />
+                  onValueChange={(value) => {
+                    if (value) setSort(value);
+                  }}
+                >
+                  <SelectTrigger aria-label="Order printings by" className="mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PRINTING_SORT_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </div>
-          <button
-            type="button"
-            aria-label="Close printing picker"
-            onClick={onClose}
-            className="rounded-lg p-2 text-zinc-400 transition hover:bg-zinc-900 hover:text-zinc-100"
+          <DialogClose
+            render={
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Close printing picker"
+                className="rounded-lg p-2 hover:text-foreground"
+              />
+            }
           >
             <X className="size-5" />
-          </button>
-        </div>
+          </DialogClose>
+        </DialogHeader>
 
-        {status === "loading" ? (
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-950/80 p-8 text-center text-sm font-semibold text-zinc-400">
-            Loading printings…
-          </div>
-        ) : status === "error" ? (
-          <div className="rounded-2xl border border-rose-900/70 bg-rose-950/30 p-8 text-center text-sm font-semibold text-rose-200">
-            Could not load printings from Scryfall.
-          </div>
-        ) : visiblePrintings.length === 0 ? (
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-950/80 p-8 text-center text-sm font-semibold text-zinc-400">
-            No printings match that set name.
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 gap-x-5 gap-y-8 sm:grid-cols-3 lg:grid-cols-5">
-            {visiblePrintings.map((printing) => {
-              const isSelected =
-                row.setCode === printing.setCode &&
-                row.collectorNumber === printing.collectorNumber;
-              return (
-                <button
-                  key={printing.scryfallId}
-                  type="button"
-                  onClick={() => onSelect(printing)}
-                  className="group min-w-0 text-left"
-                >
-                  <div
-                    className={`relative overflow-hidden rounded-xl bg-zinc-950 shadow-xl shadow-black/30 transition group-hover:-translate-y-1 group-hover:ring-2 group-hover:ring-cyan-300/80 ${isSelected ? "ring-2 ring-cyan-300" : "ring-1 ring-zinc-700"}`}
+        <DialogBody>
+          {status === "loading" ? (
+            <Empty
+              variant="outline"
+              role="status"
+              className="rounded-2xl p-8 font-semibold text-subtle-foreground"
+            >
+              Loading printings…
+            </Empty>
+          ) : status === "error" ? (
+            <Alert
+              role="alert"
+              size="panel"
+              className="rounded-2xl p-8 text-center font-semibold text-destructive-emphasis"
+            >
+              Could not load printings from Scryfall.
+            </Alert>
+          ) : visiblePrintings.length === 0 ? (
+            <Empty
+              variant="outline"
+              className="rounded-2xl p-8 font-semibold text-subtle-foreground"
+            >
+              No printings match that set name.
+            </Empty>
+          ) : (
+            <div className="grid grid-cols-2 gap-x-5 gap-y-8 sm:grid-cols-3 lg:grid-cols-5">
+              {visiblePrintings.map((printing) => {
+                const isSelected =
+                  row.setCode === printing.setCode &&
+                  row.collectorNumber === printing.collectorNumber;
+                return (
+                  <button
+                    key={printing.scryfallId}
+                    type="button"
+                    onClick={() => onSelect(printing)}
+                    className="group min-w-0 text-left"
                   >
-                    {isSelected ? (
-                      <div className="absolute inset-x-3 top-3 z-10 rounded-full border border-cyan-200/60 bg-cyan-400/95 py-1 text-center text-xs font-bold uppercase tracking-[0.08em] text-cyan-950 shadow-lg shadow-black/30">
-                        Selected printing
+                    <div
+                      className={`relative overflow-hidden rounded-xl bg-background shadow-xl shadow-black/30 transition group-hover:-translate-y-1 group-hover:ring-2 group-hover:ring-highlight/80 ${isSelected ? "ring-2 ring-highlight" : "ring-1 ring-border-strong"}`}
+                    >
+                      {isSelected ? (
+                        <Badge variant="selected" className="absolute inset-x-3 top-3 z-10">
+                          Selected printing
+                        </Badge>
+                      ) : null}
+                      <div className="aspect-[488/680] bg-surface">
+                        {printing.imageUrl ? (
+                          <img
+                            src={printing.imageUrl}
+                            alt={`${printing.name} ${printing.setCode}`}
+                            loading="lazy"
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-full items-start justify-center px-3 pt-8 text-center text-sm font-semibold text-muted-foreground">
+                            {printing.name}
+                          </div>
+                        )}
                       </div>
-                    ) : null}
-                    <div className="aspect-[488/680] bg-zinc-900">
-                      {printing.imageUrl ? (
-                        <img
-                          src={printing.imageUrl}
-                          alt={`${printing.name} ${printing.setCode}`}
-                          loading="lazy"
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-full items-start justify-center px-3 pt-8 text-center text-sm font-semibold text-zinc-500">
-                          {printing.name}
-                        </div>
-                      )}
                     </div>
-                  </div>
-                  <div className="mt-2 flex items-center justify-between gap-2 px-1 text-sm text-zinc-200">
-                    <span className="truncate font-semibold">{printing.setCode}</span>
-                    <span>{formatPrice(printing.priceUsd)}</span>
-                  </div>
-                  <p className="mt-1 truncate px-1 text-xs text-zinc-500">
-                    {printing.setName} · {printing.releasedAt || "Unknown date"}
-                  </p>
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    </div>
+                    <div className="mt-2 flex items-center justify-between gap-2 px-1 text-sm text-strong-foreground">
+                      <span className="truncate font-semibold">{printing.setCode}</span>
+                      <span>{formatPrice(printing.priceUsd)}</span>
+                    </div>
+                    <p className="mt-1 truncate px-1 text-xs text-muted-foreground">
+                      {printing.setName} · {printing.releasedAt || "Unknown date"}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </DialogBody>
+      </DialogContent>
+    </Dialog>
   );
 }
 
