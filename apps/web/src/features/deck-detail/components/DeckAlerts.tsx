@@ -18,7 +18,11 @@ export function DeckAlerts({ deck, onDismissWarnings }: DeckAlertsProps) {
 
   return (
     <div className="space-y-4 px-5 pb-2 pt-5">
-      {hasError ? <Alert className="bg-destructive-surface/40">{deck.errorMessage}</Alert> : null}
+      {hasError ? (
+        <Alert role="alert" className="bg-destructive-surface/40">
+          {deck.errorMessage}
+        </Alert>
+      ) : null}
 
       {hasWarnings ? (
         <Alert tone="warning" render={<section aria-labelledby="deck-warnings-title" />}>
