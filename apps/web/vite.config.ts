@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
 import { devtools } from "@tanstack/devtools-vite";
 
@@ -36,7 +37,17 @@ const designSystemDeps = [
 ].map((dep) => `@jaiir320/design-system > ${dep}`);
 
 const config = defineConfig({
-  resolve: { tsconfigPaths: true },
+  resolve: {
+    tsconfigPaths: true,
+    // Base UI's CommonJS use-sync-external-store shim breaks server rendering in the
+    // production build (a second React); serve it as ESM instead. See src/lib/syncExternalStore.ts.
+    alias: [
+      {
+        find: /^use-sync-external-store\/shim(\/index|\/with-selector)?(\.js)?$/,
+        replacement: fileURLToPath(new URL("./src/lib/syncExternalStore.ts", import.meta.url)),
+      },
+    ],
+  },
   optimizeDeps: { include: designSystemDeps },
   plugins: [
     devtools(),
