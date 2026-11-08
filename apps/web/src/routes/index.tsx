@@ -16,7 +16,7 @@ export const Route = createFileRoute("/")({
 function RootRedirectPage() {
   return (
     <main className="mx-auto w-full p-8">
-      <p className="text-sm text-zinc-500">Redirecting…</p>
+      <p className="text-sm text-muted-foreground">Redirecting…</p>
     </main>
   );
 }
