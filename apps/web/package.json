@@ -18,7 +18,7 @@
     "@better-auth/infra": "^0.2.3",
     "@dnd-kit/abstract": "^0.4.0",
     "@dnd-kit/react": "^0.4.0",
-    "@jaiir320/design-system": "github:JaiiR320/design-system#350b9f1402f92bed426283197a8a364b86efe9cd",
+    "@jaiir320/design-system": "github:JaiiR320/design-system#14011662150f735f3f71e8ae94e77c3237ca65a1",
     "@neondatabase/serverless": "^1.0.2",
     "@tailwindcss/vite": "^4.1.18",
     "@tanstack/react-devtools": "latest",
