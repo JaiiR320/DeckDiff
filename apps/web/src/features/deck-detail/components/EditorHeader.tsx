@@ -1,6 +1,6 @@
 import { useDragDropMonitor } from "@dnd-kit/react";
 import { ArrowDown, ArrowUp, Download, Import, Redo2, Undo2 } from "lucide-react";
-import { useEffect, useReducer, useRef, useState } from "react";
+import { type ReactNode, useEffect, useId, useReducer, useRef, useState } from "react";
 import { Button } from "@jaiir320/design-system/components/button";
 import { Input } from "@jaiir320/design-system/components/input";
 import { Popover, PopoverContent } from "@jaiir320/design-system/components/popover";
@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from "@jaiir320/design-system/components/select";
 import { Separator } from "@jaiir320/design-system/components/separator";
+import { focusRing } from "@jaiir320/design-system/lib/recipes";
 import {
   Tooltip,
   TooltipContent,
@@ -161,22 +162,22 @@ export function EditorHeader({
             </TooltipContent>
           </Tooltip>
           <Separator orientation="vertical" className="mx-1 h-10" />
-          <Tooltip>
-            <TooltipTrigger
-              render={<Button size="icon" onClick={onUndo} disabled={!canUndo} aria-label="Undo" />}
-            >
-              <Undo2 className="size-4" strokeWidth={1.75} />
-            </TooltipTrigger>
-            <TooltipContent>Undo</TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger
-              render={<Button size="icon" onClick={onRedo} disabled={!canRedo} aria-label="Redo" />}
-            >
-              <Redo2 className="size-4" strokeWidth={1.75} />
-            </TooltipTrigger>
-            <TooltipContent>Redo</TooltipContent>
-          </Tooltip>
+          <HistoryButton
+            label="Undo"
+            disabledReason="Nothing to undo"
+            onClick={onUndo}
+            disabled={!canUndo}
+          >
+            <Undo2 className="size-4" strokeWidth={1.75} />
+          </HistoryButton>
+          <HistoryButton
+            label="Redo"
+            disabledReason="Nothing to redo"
+            onClick={onRedo}
+            disabled={!canRedo}
+          >
+            <Redo2 className="size-4" strokeWidth={1.75} />
+          </HistoryButton>
           <Separator orientation="vertical" className="mx-1 h-10" />
           <Button onClick={onExport} disabled={exportDisabled} size="sm">
             <Download className="size-4" strokeWidth={1.75} />
@@ -189,6 +190,58 @@ export function EditorHeader({
         </div>
       </div>
     </div>
+  );
+}
+
+// A disabled button is pointer-inert and can't open a tooltip, so a focusable group carries
+// the name and describes itself with persistent sr-only text (design-system DisabledReason).
+function HistoryButton({
+  label,
+  disabledReason,
+  onClick,
+  disabled,
+  children,
+}: {
+  label: string;
+  disabledReason: string;
+  onClick: () => void;
+  disabled: boolean;
+  children: ReactNode;
+}) {
+  const reasonId = useId();
+
+  if (!disabled) {
+    return (
+      <Tooltip>
+        <TooltipTrigger render={<Button size="icon" onClick={onClick} aria-label={label} />}>
+          {children}
+        </TooltipTrigger>
+        <TooltipContent>{label}</TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  return (
+    <>
+      <Tooltip>
+        <TooltipTrigger
+          render={<span />}
+          tabIndex={0}
+          role="group"
+          aria-label={label}
+          aria-describedby={reasonId}
+          className={`inline-flex rounded-lg ${focusRing}`}
+        >
+          <Button size="icon" disabled aria-label={label}>
+            {children}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>{disabledReason}</TooltipContent>
+      </Tooltip>
+      <span id={reasonId} className="sr-only">
+        {disabledReason}
+      </span>
+    </>
   );
 }
 

@@ -33,6 +33,7 @@ import { Label } from "@jaiir320/design-system/components/label";
 import { SwitchChip } from "@jaiir320/design-system/components/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@jaiir320/design-system/components/tabs";
 import { ToggleGroup, ToggleGroupItem } from "@jaiir320/design-system/components/toggle-group";
+import { focusRing } from "@jaiir320/design-system/lib/recipes";
 import { ManaSymbolIcon } from "#/components/cards/ManaSymbolIcon";
 import type { Dispatch, FormEvent } from "react";
 import { useId, useReducer, useRef, useState } from "react";
@@ -462,7 +463,7 @@ function GeneralSettingsTab({
                       <button
                         type="button"
                         onClick={() => toggleFolderCollapsed(folder.id)}
-                        className="flex size-8 shrink-0 items-center justify-center rounded-md transition hover:bg-black/10"
+                        className="flex size-8 shrink-0 items-center justify-center rounded-md transition hover:bg-on-image/10"
                         aria-label={`${isCollapsed ? "Expand" : "Collapse"} ${folder.name}`}
                       >
                         {isCollapsed ? (
@@ -807,19 +808,64 @@ function CategorySettingsRow({
             >
               Rename
             </Button>
-            <Button
-              onClick={() => removeCategory(category.id, categories, cards, onCategoriesChange)}
-              disabled={isBlocked}
-              title={isBlocked ? "Move cards out before removing." : "Remove category"}
-              size="sm"
-              aria-label={`Remove ${category.name}`}
-            >
-              Remove
-            </Button>
+            <RemoveCategoryButton
+              categoryName={category.name}
+              isBlocked={isBlocked}
+              onRemove={() => removeCategory(category.id, categories, cards, onCategoriesChange)}
+            />
           </div>
         </div>
       )}
     </div>
+  );
+}
+
+const blockedReason = "Move cards out before removing.";
+
+// A disabled button is pointer-inert, so a focusable group carries the hover title and
+// describes itself with persistent sr-only text.
+function RemoveCategoryButton({
+  categoryName,
+  isBlocked,
+  onRemove,
+}: {
+  categoryName: string;
+  isBlocked: boolean;
+  onRemove: () => void;
+}) {
+  const reasonId = useId();
+
+  if (!isBlocked) {
+    return (
+      <Button
+        onClick={onRemove}
+        title="Remove category"
+        size="sm"
+        aria-label={`Remove ${categoryName}`}
+      >
+        Remove
+      </Button>
+    );
+  }
+
+  return (
+    <>
+      <span
+        tabIndex={0}
+        role="group"
+        title={blockedReason}
+        aria-label={`Remove ${categoryName}`}
+        aria-describedby={reasonId}
+        className={`inline-flex rounded-lg ${focusRing}`}
+      >
+        <Button disabled size="sm" aria-label={`Remove ${categoryName}`}>
+          Remove
+        </Button>
+      </span>
+      <span id={reasonId} className="sr-only">
+        {blockedReason}
+      </span>
+    </>
   );
 }
 
