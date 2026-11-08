@@ -1,6 +1,6 @@
 import { useDraggable, useDroppable } from "@dnd-kit/react";
 import { MoreHorizontal } from "lucide-react";
-import { useCallback, useEffect, useReducer, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useReducer, useRef, useState } from "react";
 import type { CSSProperties, RefObject } from "react";
 import { Badge } from "@jaiir320/design-system/components/badge";
 import { Button } from "@jaiir320/design-system/components/button";
@@ -362,6 +362,8 @@ function CategoryStackMenu({ menu }: { menu: CategoryStackMenuModel }) {
     saveRename,
     setMenuState,
   } = menu;
+  const removeReasonId = useId();
+  const removeBlocked = rowCount > 0;
 
   return (
     <div>
@@ -424,14 +426,22 @@ function CategoryStackMenu({ menu }: { menu: CategoryStackMenuModel }) {
               >
                 Hide category
               </DropdownMenuItem>
-              <DropdownMenuItem
-                disabled={readOnly || rowCount > 0 || !onRemoveCategory}
-                title={rowCount > 0 ? "Move cards out before removing." : "Remove category"}
-                variant="destructive"
-                onClick={() => onRemoveCategory?.(category)}
-              >
-                Remove
-              </DropdownMenuItem>
+              {/* Disabled items ignore the pointer, so the wrapper carries the hover reason. */}
+              <div title={removeBlocked ? "Move cards out before removing." : "Remove category"}>
+                <DropdownMenuItem
+                  disabled={readOnly || removeBlocked || !onRemoveCategory}
+                  aria-describedby={removeBlocked ? removeReasonId : undefined}
+                  variant="destructive"
+                  onClick={() => onRemoveCategory?.(category)}
+                >
+                  Remove
+                </DropdownMenuItem>
+                {removeBlocked ? (
+                  <span id={removeReasonId} className="sr-only">
+                    Move cards out before removing.
+                  </span>
+                ) : null}
+              </div>
             </>
           )}
         </DropdownMenuContent>
