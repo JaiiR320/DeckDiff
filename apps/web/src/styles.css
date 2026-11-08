@@ -6,15 +6,3 @@ body,
 #app {
   min-height: 100%;
 }
-
-/*
- * Legacy: unlayered, so it beats utilities and native controls ignore their own
- * text-* / font-* classes (they inherit instead). Kept only until the controls are
- * migrated off those dead classes; the design system's own reset is layered.
- */
-button,
-input,
-textarea,
-select {
-  font: inherit;
-}
