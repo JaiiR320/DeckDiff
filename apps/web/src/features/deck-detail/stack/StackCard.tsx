@@ -1,8 +1,17 @@
 import { useDraggable } from "@dnd-kit/react";
 import { Minus, MoreHorizontal, Plus, RotateCw } from "lucide-react";
+import { Button } from "@jaiir320/design-system/components/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from "@jaiir320/design-system/components/dropdown-menu";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
-import { ContextMenu, ContextMenuItem, ContextMenuSubmenuItem } from "#/components/ui/ContextMenu";
 import type { DeckTileCover } from "#/lib/deck";
 import type { CardCategory, DeckCategory } from "#/lib/decklist";
 import type { EditorRow } from "../editor/types";
@@ -53,10 +62,8 @@ export function StackCard({
   readOnly,
   viewState,
 }: StackCardProps) {
-  const menuButtonRef = useRef<HTMLButtonElement | null>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const [cardLayout, setCardLayout] = useState<CardLayout | null>(null);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const faceIdentity = `${row.oracleId}:${row.setCode ?? ""}:${row.collectorNumber ?? ""}:${row.name}`;
   const [faceState, setFaceState] = useState({ identity: faceIdentity, index: 0 });
   const faceIndex = faceState.identity === faceIdentity ? faceState.index : 0;
@@ -76,14 +83,19 @@ export function StackCard({
   const imageUrl = hasMultipleFaces ? faces[displayFaceIndex]?.imageUrl : fallbackImageUrl;
   const imageName = hasMultipleFaces ? (faces[displayFaceIndex]?.name ?? row.name) : row.name;
   const isChanged = row.status !== "same";
-  const toneClass =
+  // Measured old result: the hover/drag ring only replaces the status ring on changed cards.
+  const ringColorClass =
     row.status === "added"
-      ? "ring-emerald-400/40"
+      ? "ring-success/40"
       : row.status === "removed"
-        ? "ring-rose-400/40 opacity-70"
+        ? "ring-destructive-text/40 opacity-70"
         : row.status === "changed"
-          ? "ring-amber-400/40"
-          : "ring-zinc-700/80";
+          ? isDragging
+            ? "ring-highlight-strong"
+            : viewState.hovered
+              ? "ring-highlight/70"
+              : "ring-warning-hover/40"
+          : "ring-border-strong/80";
 
   useEffect(() => () => resizeObserverRef.current?.disconnect(), []);
 
@@ -137,7 +149,7 @@ export function StackCard({
         ref={setCardRef}
         onPointerEnter={onHover}
         style={cardStyle}
-        className={`pointer-events-auto relative aspect-[488/680] overflow-hidden rounded-xl bg-zinc-900 shadow-lg shadow-black/30 [container-type:inline-size] ${isChanged ? "ring-2" : "ring-1"} transition-all duration-300 ${isMoveDisabled ? "" : "cursor-grab active:cursor-grabbing"} ${isDragging ? "scale-[1.04] rotate-1 opacity-90 shadow-2xl shadow-cyan-950/50 ring-2 ring-cyan-200" : viewState.hovered ? "ring-cyan-300/70" : ""} ${toneClass}`}
+        className={`pointer-events-auto relative aspect-[488/680] overflow-hidden rounded-xl bg-surface shadow-lg shadow-black/30 [container-type:inline-size] ${isChanged ? "ring-2" : "ring-1"} transition-all duration-300 ${isMoveDisabled ? "" : "cursor-grab active:cursor-grabbing"} ${isDragging ? "scale-[1.04] rotate-1 opacity-90 shadow-2xl shadow-info-surface/50 ring-2" : ""} ${ringColorClass}`}
       >
         {imageUrl ? (
           <img
@@ -148,55 +160,58 @@ export function StackCard({
             loading="lazy"
           />
         ) : (
-          <div className="flex h-full items-start justify-center bg-zinc-900 px-3 pt-8 text-center text-sm font-semibold text-zinc-400">
+          <div className="flex h-full items-start justify-center bg-surface px-3 pt-8 text-center text-sm font-semibold text-subtle-foreground">
             {row.name}
           </div>
         )}
 
-        <div className="absolute left-0 top-0 rounded-br-lg bg-zinc-950/75 px-[var(--card-badge-padding-x)] py-[var(--card-badge-padding-y)] font-mono text-[length:var(--card-badge-font-size)] font-semibold text-zinc-100 shadow-lg shadow-black/30">
+        <div className="absolute left-0 top-0 rounded-br-lg bg-surface-glass/75 px-[var(--card-badge-padding-x)] py-[var(--card-badge-padding-y)] font-mono text-[length:var(--card-badge-font-size)] font-semibold text-on-image-foreground shadow-lg shadow-black/30">
           {row.currentQuantity}
         </div>
 
         {viewState.showEdhrecRank && row.edhrecRank != null ? (
-          <div className="absolute right-0 top-0 rounded-bl-lg bg-zinc-950/75 px-[var(--card-badge-padding-x)] py-[var(--card-badge-padding-y)] font-mono text-[length:var(--card-badge-font-size)] font-semibold text-zinc-100 shadow-lg shadow-black/30">
+          <div className="absolute right-0 top-0 rounded-bl-lg bg-surface-glass/75 px-[var(--card-badge-padding-x)] py-[var(--card-badge-padding-y)] font-mono text-[length:var(--card-badge-font-size)] font-semibold text-on-image-foreground shadow-lg shadow-black/30">
             #{row.edhrecRank}
           </div>
         ) : null}
 
-        <div className="absolute bottom-0 left-0 rounded-tr-lg bg-zinc-950/75 px-[var(--card-badge-padding-x)] py-[var(--card-badge-padding-y)] font-mono text-[length:var(--card-badge-font-size)] font-semibold text-zinc-100 shadow-lg shadow-black/30">
+        <div className="absolute bottom-0 left-0 rounded-tr-lg bg-surface-glass/75 px-[var(--card-badge-padding-x)] py-[var(--card-badge-padding-y)] font-mono text-[length:var(--card-badge-font-size)] font-semibold text-on-image-foreground shadow-lg shadow-black/30">
           {formatPrice(row.priceUsd)}
         </div>
 
-        <div className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/45 to-transparent opacity-80" />
+        <div className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-on-image/45 to-transparent opacity-80" />
 
         {viewState.showControls ? (
           <div
-            className={`absolute right-[var(--card-control-right)] top-[var(--card-control-top)] z-20 flex -translate-y-1/2 flex-col rounded-lg border border-white/20 bg-zinc-950/45 shadow-xl shadow-black/30 backdrop-blur-sm transition duration-200 ${viewState.hovered ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"}`}
+            className={`absolute right-[var(--card-control-right)] top-[var(--card-control-top)] z-20 flex -translate-y-1/2 flex-col rounded-lg border border-on-image-border/20 bg-surface-glass/45 shadow-xl shadow-black/30 backdrop-blur-sm transition duration-200 ${viewState.hovered ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"}`}
           >
             {readOnly ? null : (
               <>
-                <button
-                  type="button"
+                <Button
+                  variant="overlay"
+                  size="none"
                   aria-label={`Increase ${row.name} quantity`}
                   onClick={() => onAdjustQuantity?.(row, 1)}
-                  className="inline-flex size-[var(--card-control-size)] items-center justify-center text-zinc-100 transition hover:bg-white/15"
+                  className={railButtonClassName}
                 >
                   <Plus className="size-[var(--card-control-icon-size)]" strokeWidth={2.5} />
-                </button>
-                <button
-                  type="button"
+                </Button>
+                <Button
+                  variant="overlay"
+                  size="none"
                   aria-label={`Decrease ${row.name} quantity`}
                   onClick={() => onAdjustQuantity?.(row, -1)}
                   disabled={row.currentQuantity === 0 && row.baselineQuantity === 0}
-                  className="inline-flex size-[var(--card-control-size)] items-center justify-center border-t border-white/20 text-zinc-100 transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-40"
+                  className={`${railButtonClassName} border-t border-on-image-border/20`}
                 >
                   <Minus className="size-[var(--card-control-icon-size)]" strokeWidth={2.5} />
-                </button>
+                </Button>
               </>
             )}
             {hasMultipleFaces ? (
-              <button
-                type="button"
+              <Button
+                variant="overlay"
+                size="none"
                 aria-label={`Flip ${row.name}`}
                 title="Flip card"
                 onPointerDown={(event) => event.stopPropagation()}
@@ -208,77 +223,62 @@ export function StackCard({
                       (current.identity === faceIdentity ? current.index + 1 : 1) % faces.length,
                   }));
                 }}
-                className="inline-flex size-[var(--card-control-size)] items-center justify-center border-t border-white/20 text-zinc-100 transition hover:bg-white/15"
+                className={`${railButtonClassName} border-t border-on-image-border/20`}
               >
                 <RotateCw className="size-[var(--card-control-icon-size)]" strokeWidth={2.5} />
-              </button>
+              </Button>
             ) : null}
-            <div className="border-t border-white/20">
-              <button
-                ref={menuButtonRef}
-                type="button"
-                aria-label={`${row.name} actions`}
-                disabled={!onChangePrinting && (!onSetDeckCover || !imageUrl)}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  setIsMenuOpen((current) => !current);
-                }}
-                className="inline-flex size-[var(--card-control-size)] items-center justify-center text-zinc-100 transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                <MoreHorizontal
-                  className="size-[var(--card-control-icon-size)]"
-                  strokeWidth={2.5}
-                />
-              </button>
-              {isMenuOpen ? (
-                <ContextMenu
-                  open={isMenuOpen}
-                  onOpenChange={setIsMenuOpen}
-                  anchorRef={menuButtonRef}
-                  placement="left-start"
-                  widthClassName="w-44"
+            <div className="border-t border-on-image-border/20">
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  aria-label={`${row.name} actions`}
+                  disabled={!onChangePrinting && (!onSetDeckCover || !imageUrl)}
+                  onClick={(event) => event.stopPropagation()}
+                  render={<Button variant="overlay" size="none" className={railButtonClassName} />}
                 >
+                  <MoreHorizontal
+                    className="size-[var(--card-control-icon-size)]"
+                    strokeWidth={2.5}
+                  />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent side="left" align="start" className="w-44">
                   {imageUrl && onSetDeckCover ? (
-                    <ContextMenuItem
-                      onSelect={() => {
-                        setIsMenuOpen(false);
-                        onSetDeckCover(createDeckTileCover(row, imageUrl, imageName));
-                      }}
+                    <DropdownMenuItem
+                      onClick={() => onSetDeckCover(createDeckTileCover(row, imageUrl, imageName))}
                     >
                       Use as deck cover
-                    </ContextMenuItem>
+                    </DropdownMenuItem>
                   ) : null}
                   {onChangePrinting ? (
-                    <ContextMenuItem
-                      onSelect={() => {
-                        setIsMenuOpen(false);
-                        onChangePrinting(row);
-                      }}
-                    >
+                    <DropdownMenuItem onClick={() => onChangePrinting(row)}>
                       Change printing
-                    </ContextMenuItem>
+                    </DropdownMenuItem>
                   ) : null}
                   {moveTargetCategories.length > 0 ? (
-                    <ContextMenuSubmenuItem
-                      disabled={!canMoveCard}
-                      title={canMoveCard ? "Move to category" : "Card cannot be moved"}
-                      submenu={moveTargetCategories.map((category) => (
-                        <ContextMenuItem
-                          key={category.id}
-                          onSelect={() => {
-                            setIsMenuOpen(false);
-                            onMoveCardCategory?.(row, category.id);
-                          }}
-                        >
-                          {category.name}
-                        </ContextMenuItem>
-                      ))}
-                    >
-                      Move to
-                    </ContextMenuSubmenuItem>
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger
+                        disabled={!canMoveCard}
+                        title={canMoveCard ? "Move to category" : "Card cannot be moved"}
+                      >
+                        Move to
+                      </DropdownMenuSubTrigger>
+                      {/* Like the old submenu: shift up to fit instead of flipping to bottom-aligned. */}
+                      <DropdownMenuSubContent
+                        positionerProps={{ collisionAvoidance: { align: "shift" } }}
+                      >
+                        {moveTargetCategories.map((category) => (
+                          <DropdownMenuItem
+                            key={category.id}
+                            onClick={() => onMoveCardCategory?.(row, category.id)}
+                          >
+                            {category.name}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuSubContent>
+                    </DropdownMenuSub>
                   ) : null}
-                </ContextMenu>
-              ) : null}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         ) : null}
@@ -286,6 +286,8 @@ export function StackCard({
     </div>
   );
 }
+
+const railButtonClassName = "size-[var(--card-control-size)]";
 
 function formatPrice(price: number | undefined) {
   return price === undefined ? "--" : `$${price.toFixed(2)}`;

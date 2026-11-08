@@ -2,8 +2,20 @@ import { useDraggable, useDroppable } from "@dnd-kit/react";
 import { MoreHorizontal } from "lucide-react";
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import type { CSSProperties, RefObject } from "react";
-import { ContextMenu, ContextMenuItem } from "#/components/ui/ContextMenu";
-import { IconButton } from "#/components/ui/IconButton";
+import { Badge } from "@jaiir320/design-system/components/badge";
+import { Button } from "@jaiir320/design-system/components/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@jaiir320/design-system/components/dropdown-menu";
+import { Empty } from "@jaiir320/design-system/components/empty";
+import { Field, FieldLabel } from "@jaiir320/design-system/components/field";
+import { Input } from "@jaiir320/design-system/components/input";
+import { Popover, PopoverContent } from "@jaiir320/design-system/components/popover";
 import type { DeckCardSort, DeckCardSortDirection } from "#/lib/deck";
 import type { DeckTileCover } from "#/lib/deck";
 import type { CardCategory, DeckCategory } from "#/lib/decklist";
@@ -160,7 +172,7 @@ export function CategoryStack({
 
     handledStartRenameRef.current = true;
     setMenuState({
-      isMenuOpen: true,
+      isMenuOpen: false,
       isMovingCards: false,
       isRenaming: true,
       renameDraft: categoryName,
@@ -175,22 +187,22 @@ export function CategoryStack({
         droppableRef(element);
         onCategoryRef(element);
       }}
-      className={`relative select-none overflow-visible rounded-xl border bg-zinc-950/80 transition ${
-        isDragging ? "scale-[1.02] border-cyan-400/70 shadow-2xl shadow-cyan-950/30" : ""
+      className={`relative isolate select-none overflow-visible rounded-xl border bg-surface-glass/80 transition ${
+        isDragging ? "scale-[1.02] shadow-2xl shadow-info-surface/30" : ""
       } ${
         isCardDropTarget
-          ? "border-cyan-300/80 bg-cyan-950/20 shadow-2xl shadow-cyan-950/40"
-          : "border-zinc-800"
+          ? "border-highlight/80 bg-info-surface/20 shadow-2xl shadow-info-surface/40"
+          : "border-border"
       }`}
     >
       <div className="overflow-hidden rounded-xl">
-        <div className="border-b border-zinc-800 bg-zinc-900/80 px-3 py-1.5">
+        <div className="border-b border-border bg-surface/80 px-3 py-1.5">
           <div className="flex items-start justify-between gap-3">
             <div
               ref={handleRef}
               className={`min-w-0 flex-1 ${readOnly ? "" : "cursor-grab active:cursor-grabbing"}`}
             >
-              <h3 className="truncate font-mono text-sm font-semibold uppercase tracking-[0.08em] text-zinc-300">
+              <h3 className="truncate font-mono text-sm font-semibold uppercase tracking-label text-secondary-foreground">
                 {categoryName}
               </h3>
             </div>
@@ -219,34 +231,34 @@ export function CategoryStack({
               />
             )}
           </div>
-          <div className="mt-0.5 flex items-center justify-between gap-3 font-mono text-xs text-zinc-600">
+          <div className="mt-0.5 flex items-center justify-between gap-3 font-mono text-xs text-faint-foreground">
             <p className="min-w-0 truncate">
               Qty: {totalQuantity}
-              <span className="ml-2 text-emerald-300">+{diffCounts.added}</span>
-              <span className="ml-1 text-amber-300">~{diffCounts.changed}</span>
-              <span className="ml-1 text-rose-300">-{diffCounts.removed}</span>
+              <span className="ml-2 text-success-text">+{diffCounts.added}</span>
+              <span className="ml-1 text-warning-text">~{diffCounts.changed}</span>
+              <span className="ml-1 text-destructive-muted-foreground">-{diffCounts.removed}</span>
               {categoryDiff?.previousName ? (
-                <span className="ml-2 uppercase tracking-[0.08em] text-amber-300/80">
+                <span className="ml-2 uppercase tracking-label text-warning-text/80">
                   was: {categoryDiff.previousName}
                 </span>
               ) : null}
             </p>
-            <span className="shrink-0 text-zinc-400">{formatPrice(totalPrice)}</span>
+            <span className="shrink-0 text-subtle-foreground">{formatPrice(totalPrice)}</span>
           </div>
         </div>
 
         {isCardDropTarget ? (
-          <div className="pointer-events-none absolute inset-0 z-30 flex items-start justify-center rounded-xl bg-cyan-400/5 p-3">
-            <div className="rounded-full border border-cyan-300/50 bg-zinc-950/90 px-3 py-1 font-mono text-xs font-semibold uppercase tracking-[0.08em] text-cyan-200 shadow-xl shadow-black/30">
+          <div className="pointer-events-none absolute inset-0 z-30 flex items-start justify-center rounded-xl bg-primary/5 p-3">
+            <Badge variant="outline" className="font-mono">
               Move to {categoryName}
-            </div>
+            </Badge>
           </div>
         ) : null}
 
         {sortedRows.length === 0 ? (
-          <div className="flex min-h-64 items-center justify-center bg-zinc-900/40 px-5 text-center text-sm font-semibold text-zinc-500">
+          <Empty variant="inset" className="min-h-64 px-5 font-semibold text-muted-foreground">
             Empty stack
-          </div>
+          </Empty>
         ) : (
           <div
             className="relative min-h-64 overflow-hidden px-3 pb-3"
@@ -353,140 +365,124 @@ function CategoryStackMenu({ menu }: { menu: CategoryStackMenuModel }) {
 
   return (
     <div>
-      <IconButton
-        ref={menuButtonRef}
-        aria-label={`${categoryName} actions`}
-        title={`${categoryName} actions`}
-        onClick={() => setMenuState({ isMenuOpen: !isMenuOpen })}
-        variant="ghost"
-        size="sm"
-        className="size-5 rounded-md text-zinc-400 hover:text-zinc-100"
+      <DropdownMenu
+        open={isMenuOpen}
+        onOpenChange={(open) => setMenuState({ isMenuOpen: open, isMovingCards: false })}
       >
-        <MoreHorizontal className="size-3.5" />
-      </IconButton>
-      {isMenuOpen ? (
-        <ContextMenu
-          open={isMenuOpen}
-          onOpenChange={(open) =>
-            setMenuState({
-              isMenuOpen: open,
-              isMovingCards: open ? isMovingCards : false,
-              isRenaming: open ? isRenaming : false,
-            })
-          }
-          anchorRef={menuButtonRef}
-          placement="bottom-end"
+        <DropdownMenuTrigger
+          ref={menuButtonRef}
+          aria-label={`${categoryName} actions`}
+          title={`${categoryName} actions`}
+          render={<Button variant="icon-ghost" size="icon-sm" className="rounded-md" />}
         >
-          {isRenaming ? (
-            <div className="space-y-2">
-              <label
-                className="block text-xs font-medium text-zinc-500"
-                htmlFor={`rename-${category}`}
-              >
-                Rename category
-              </label>
-              <input
-                ref={(element) => {
-                  renameInputRef.current = element;
-                  if (element && document.activeElement !== element) {
-                    element.focus();
-                    element.select();
-                  }
-                }}
-                id={`rename-${category}`}
-                aria-label="Category name"
-                value={renameDraft}
-                onChange={(event) => setMenuState({ renameDraft: event.target.value })}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") saveRename();
-                  if (event.key === "Escape")
-                    setMenuState({ isMovingCards: false, isRenaming: false });
-                }}
-                className="w-full select-text rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none transition focus:border-cyan-500"
-              />
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setMenuState({ renameDraft: categoryName, isRenaming: false })}
-                  className="flex-1 rounded-lg border border-zinc-800 px-3 py-1.5 text-sm text-zinc-300 transition hover:border-zinc-700 hover:bg-zinc-900"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={saveRename}
-                  className="flex-1 rounded-lg bg-cyan-400 px-3 py-1.5 text-sm font-semibold text-cyan-950 transition hover:bg-cyan-300"
-                >
-                  Save
-                </button>
-              </div>
-            </div>
-          ) : isMovingCards ? (
-            <div className="space-y-2">
-              <p className="px-3 py-1 text-xs font-medium text-zinc-500">Move cards to</p>
+          <MoreHorizontal className="size-3.5" />
+        </DropdownMenuTrigger>
+        {/* Like the old menu: shift to fit the viewport instead of flipping, so the move page stays whole. */}
+        <DropdownMenuContent
+          finalFocus={!isRenaming}
+          positionerProps={{ collisionAvoidance: { side: "shift", align: "shift" } }}
+        >
+          {isMovingCards ? (
+            <DropdownMenuGroup className="space-y-2">
+              <DropdownMenuLabel>Move cards to</DropdownMenuLabel>
               {categories.map((targetCategory) =>
                 targetCategory.id === category ? null : (
-                  <button
+                  <DropdownMenuItem
                     key={targetCategory.id}
-                    type="button"
-                    onClick={() => {
-                      onMoveCategoryCards?.(category, targetCategory.id);
-                      setMenuState({ isMovingCards: false, isMenuOpen: false });
-                    }}
-                    className="block w-full rounded-lg px-3 py-2 text-left text-sm text-zinc-300 transition hover:bg-zinc-900 hover:text-zinc-100"
+                    onClick={() => onMoveCategoryCards?.(category, targetCategory.id)}
                   >
                     {targetCategory.name}
-                  </button>
+                  </DropdownMenuItem>
                 ),
               )}
-              <button
-                type="button"
+              <DropdownMenuItem
+                variant="muted"
+                closeOnClick={false}
                 onClick={() => setMenuState({ isMovingCards: false })}
-                className="block w-full rounded-lg px-3 py-2 text-left text-sm text-zinc-500 transition hover:bg-zinc-900 hover:text-zinc-300"
               >
                 Back
-              </button>
-            </div>
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
           ) : (
             <>
-              <ContextMenuItem
+              <DropdownMenuItem
                 disabled={readOnly || cardCount === 0 || !onMoveCategoryCards}
-                closeOnSelect={false}
-                onSelect={() => setMenuState({ isMovingCards: true, isMenuOpen: true })}
+                closeOnClick={false}
+                onClick={() => setMenuState({ isMovingCards: true })}
               >
                 Move all cards
-              </ContextMenuItem>
-              <ContextMenuItem
+              </DropdownMenuItem>
+              <DropdownMenuItem
                 disabled={readOnly || !onRenameCategory}
-                closeOnSelect={false}
-                onSelect={() =>
-                  setMenuState({ renameDraft: categoryName, isRenaming: true, isMenuOpen: true })
-                }
+                onClick={() => setMenuState({ renameDraft: categoryName, isRenaming: true })}
               >
                 Rename
-              </ContextMenuItem>
-              <ContextMenuItem
+              </DropdownMenuItem>
+              <DropdownMenuItem
                 disabled={readOnly || !onCategoryChange}
-                onSelect={() => {
-                  onCategoryChange?.(category, { hidden: true });
-                }}
+                onClick={() => onCategoryChange?.(category, { hidden: true })}
               >
                 Hide category
-              </ContextMenuItem>
-              <ContextMenuItem
+              </DropdownMenuItem>
+              <DropdownMenuItem
                 disabled={readOnly || rowCount > 0 || !onRemoveCategory}
                 title={rowCount > 0 ? "Move cards out before removing." : "Remove category"}
-                tone="danger"
-                onSelect={() => {
-                  onRemoveCategory?.(category);
-                }}
+                variant="destructive"
+                onClick={() => onRemoveCategory?.(category)}
               >
                 Remove
-              </ContextMenuItem>
+              </DropdownMenuItem>
             </>
           )}
-        </ContextMenu>
-      ) : null}
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <Popover
+        open={isRenaming}
+        onOpenChange={(open) => {
+          if (!open) setMenuState({ renameDraft: categoryName, isRenaming: false });
+        }}
+        onOpenChangeComplete={(open) => {
+          if (open) renameInputRef.current?.select();
+        }}
+      >
+        <PopoverContent
+          anchor={menuButtonRef}
+          initialFocus={renameInputRef}
+          finalFocus={menuButtonRef}
+          aria-label="Rename category"
+        >
+          <form
+            className="space-y-2"
+            onSubmit={(event) => {
+              event.preventDefault();
+              saveRename();
+            }}
+          >
+            <Field>
+              <FieldLabel size="sm">Rename category</FieldLabel>
+              <Input
+                ref={renameInputRef}
+                inputSize="xs"
+                value={renameDraft}
+                onChange={(event) => setMenuState({ renameDraft: event.target.value })}
+                className="select-text"
+              />
+            </Field>
+            <div className="flex gap-2">
+              <Button
+                size="xs"
+                className="flex-1"
+                onClick={() => setMenuState({ renameDraft: categoryName, isRenaming: false })}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" variant="default" size="xs" className="flex-1">
+                Save
+              </Button>
+            </div>
+          </form>
+        </PopoverContent>
+      </Popover>
     </div>
   );
 }
