@@ -485,9 +485,7 @@ export const renameFolderForUser = createServerFn({ method: "POST" })
   });
 
 export const updateFolderBackgroundForUser = createServerFn({ method: "POST" })
-  .validator((data: UpdateFolderBackgroundInput) =>
-    updateFolderBackgroundInputSchema.parse(data),
-  )
+  .validator((data: UpdateFolderBackgroundInput) => updateFolderBackgroundInputSchema.parse(data))
   .handler(async ({ data }) => {
     const userId = await requireUserId();
     const folder = await requireFolderForUser(userId, data.folderId);
