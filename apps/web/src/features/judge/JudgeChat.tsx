@@ -1,8 +1,8 @@
+import { Alert } from "@jaiir320/design-system/components/alert";
+import { Button } from "@jaiir320/design-system/components/button";
+import { Textarea } from "@jaiir320/design-system/components/textarea";
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { Alert } from "#/components/ui/Alert";
-import { Button } from "#/components/ui/Button";
-import { Textarea } from "#/components/ui/Textarea";
 import type { JudgeAssistantResponse, JudgeClarification } from "#/server/judge";
 
 type JudgeMessage = {
@@ -115,44 +115,50 @@ export function JudgeChat({ getResponse }: JudgeChatProps) {
 
   return (
     <div className="mt-6 space-y-4">
-      <div className="flex min-h-80 flex-col gap-3 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4">
+      <div
+        role="log"
+        aria-label="Judge conversation"
+        className="flex min-h-80 flex-col gap-3 rounded-2xl border border-border bg-surface/60 p-4"
+      >
         {messages.length === 0 ? (
-          <p className="text-sm text-zinc-500">No messages yet.</p>
+          <p className="text-sm text-muted-foreground">No messages yet.</p>
         ) : (
           messages.map((message) => (
             <div
               key={message.id}
               className={`rounded-xl border px-4 py-3 text-sm ${
                 message.role === "user"
-                  ? "self-end border-cyan-900/60 bg-cyan-950/30 text-cyan-100"
-                  : "border-zinc-800 bg-zinc-950 text-zinc-200"
+                  ? "self-end border-info-border/60 bg-info-surface/30 text-cyan-100"
+                  : "border-border bg-background text-strong-foreground"
               }`}
             >
-              <p className="mb-1 text-xs font-medium uppercase tracking-[0.2em] text-zinc-500">
+              <p className="mb-1 text-xs font-medium uppercase tracking-eyebrow text-muted-foreground">
                 {message.role}
               </p>
               <p className="whitespace-pre-wrap">{message.content}</p>
 
               {message.isPending ? (
-                <p className="mt-2 text-xs text-zinc-500">Judge model is thinking.</p>
+                <p className="mt-2 text-xs text-muted-foreground">Judge model is thinking.</p>
               ) : null}
 
               {message.role === "assistant" && message.clarification?.unresolvedCards.length ? (
-                <div className="mt-3 border-t border-zinc-800 pt-3">
-                  <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Did you mean</p>
-                  <p className="mt-1 text-sm text-zinc-400">
+                <div className="mt-3 border-t border-border pt-3">
+                  <p className="text-xs uppercase tracking-eyebrow text-muted-foreground">
+                    Did you mean
+                  </p>
+                  <p className="mt-1 text-sm text-subtle-foreground">
                     {message.clarification.unresolvedCards[0]?.name}
                   </p>
                   <div className="mt-3 flex flex-wrap gap-2">
                     {message.clarification.unresolvedCards[0]?.suggestions.map((suggestion) => (
-                      <button
+                      <Button
                         key={suggestion}
-                        type="button"
+                        size="xs"
                         onClick={() => void handleSuggestionClick(message, suggestion)}
-                        className="rounded-lg border border-zinc-700 px-3 py-1.5 text-xs text-zinc-200 transition hover:border-cyan-500 hover:text-cyan-200"
+                        className="border-border-strong text-strong-foreground hover:border-ring hover:bg-transparent hover:text-selected-foreground"
                       >
                         {suggestion}
-                      </button>
+                      </Button>
                     ))}
                   </div>
                 </div>
@@ -162,18 +168,19 @@ export function JudgeChat({ getResponse }: JudgeChatProps) {
         )}
       </div>
 
-      {errorMessage ? <Alert className="border-rose-900/40">{errorMessage}</Alert> : null}
+      {errorMessage ? <Alert role="alert">{errorMessage}</Alert> : null}
 
       <form className="space-y-3" onSubmit={handleSubmit}>
         <Textarea
+          aria-label="Message"
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
           placeholder="Type your message"
           rows={4}
-          className="w-full resize-y"
+          className="resize-y"
         />
         <div className="flex justify-end">
-          <Button type="submit" variant="primary" disabled={isSendDisabled}>
+          <Button type="submit" variant="default" disabled={isSendDisabled}>
             {isSubmitting ? "Sending…" : "Send"}
           </Button>
         </div>
