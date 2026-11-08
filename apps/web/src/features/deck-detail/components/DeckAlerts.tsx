@@ -2,6 +2,7 @@ import { Alert, AlertDescription } from "@jaiir320/design-system/components/aler
 import { Button } from "@jaiir320/design-system/components/button";
 import { X } from "lucide-react";
 import type { DeckState } from "../editor/types";
+import { buttonLooks } from "#/components/buttonLooks";
 
 type DeckAlertsProps = {
   deck: DeckState;
@@ -19,7 +20,7 @@ export function DeckAlerts({ deck, onDismissWarnings }: DeckAlertsProps) {
   return (
     <div className="space-y-4 px-5 pb-2 pt-5">
       {hasError ? (
-        <Alert role="alert" className="bg-destructive-surface/40">
+        <Alert tone="destructive" role="alert" className="bg-destructive-surface/40">
           {deck.errorMessage}
         </Alert>
       ) : null}
@@ -35,8 +36,9 @@ export function DeckAlerts({ deck, onDismissWarnings }: DeckAlertsProps) {
             </h3>
             <Button
               onClick={onDismissWarnings}
-              variant="warning-ghost"
+              variant={null}
               size="icon-sm"
+              className={buttonLooks.warningGhost}
               aria-label="Dismiss warnings"
             >
               <X className="size-4" />

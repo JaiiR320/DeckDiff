@@ -24,6 +24,7 @@ import { cardLayoutToCssVars, type CardLayout } from "./cardLayout";
 import { applySortDirection, compareEdhrecRanks, comparePrices } from "./categoryStackSort";
 import { StackCard } from "./StackCard";
 import { cardCategoryDropId } from "./stackIds";
+import { buttonLooks } from "#/components/buttonLooks";
 
 type CategoryStackProps = {
   category: CardCategory;
@@ -249,7 +250,10 @@ export function CategoryStack({
 
         {isCardDropTarget ? (
           <div className="pointer-events-none absolute inset-0 z-30 flex items-start justify-center rounded-xl bg-primary/5 p-3">
-            <Badge variant="outline" className="font-mono">
+            <Badge
+              variant={null}
+              className="rounded-full border border-highlight/50 bg-surface-glass/90 px-3 py-1 font-mono text-xs font-semibold tracking-label text-selected-foreground uppercase shadow-xl shadow-black/30"
+            >
               Move to {categoryName}
             </Badge>
           </div>
@@ -375,7 +379,13 @@ function CategoryStackMenu({ menu }: { menu: CategoryStackMenuModel }) {
           ref={menuButtonRef}
           aria-label={`${categoryName} actions`}
           title={`${categoryName} actions`}
-          render={<Button variant="icon-ghost" size="icon-sm" className="rounded-md" />}
+          render={
+            <Button
+              variant={null}
+              size="icon-sm"
+              className={`${buttonLooks.iconGhost} rounded-md`}
+            />
+          }
         >
           <MoreHorizontal className="size-3.5" />
         </DropdownMenuTrigger>
@@ -472,21 +482,21 @@ function CategoryStackMenu({ menu }: { menu: CategoryStackMenuModel }) {
               <FieldLabel size="sm">Rename category</FieldLabel>
               <Input
                 ref={renameInputRef}
-                inputSize="xs"
+                inputSize="sm"
                 value={renameDraft}
                 onChange={(event) => setMenuState({ renameDraft: event.target.value })}
-                className="select-text"
+                className="rounded-lg select-text"
               />
             </Field>
             <div className="flex gap-2">
               <Button
                 size="xs"
-                className="flex-1"
+                className="flex-1 rounded-lg"
                 onClick={() => setMenuState({ renameDraft: categoryName, isRenaming: false })}
               >
                 Cancel
               </Button>
-              <Button type="submit" variant="default" size="xs" className="flex-1">
+              <Button type="submit" variant="default" size="xs" className="flex-1 rounded-lg">
                 Save
               </Button>
             </div>

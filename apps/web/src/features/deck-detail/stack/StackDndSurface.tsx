@@ -593,6 +593,7 @@ function StackSummary({
           aria-label={showDiffOnly ? "Show all cards" : "Show differences only"}
           title={showDiffOnly ? "Show all cards" : "Show differences only"}
           variant="accent"
+          size="icon-sm"
           // Measured old result: the surface fill wins in both states; off-state hover keeps it and lifts the border, off-state radius is xl.
           className="relative not-data-pressed:rounded-xl not-data-pressed:hover:border-border-strong not-data-pressed:hover:bg-surface data-pressed:bg-surface data-pressed:hover:bg-secondary"
         >

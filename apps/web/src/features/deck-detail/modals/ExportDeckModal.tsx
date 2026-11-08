@@ -13,6 +13,7 @@ import {
 import { SwitchChip } from "@jaiir320/design-system/components/switch";
 import { Textarea } from "@jaiir320/design-system/components/textarea";
 import type { ExportModalState } from "../editor/types";
+import { buttonLooks } from "#/components/buttonLooks";
 
 type ExportDeckModalProps = {
   exportOptions: ExportModalState;
@@ -45,7 +46,14 @@ export function ExportDeckModal({
         <DialogHeader className="border-b border-border px-6 py-5">
           <DialogTitle>Export Deck</DialogTitle>
           <DialogClose
-            render={<Button variant="icon-ghost" size="icon" aria-label="Close export modal" />}
+            render={
+              <Button
+                variant={null}
+                size="icon"
+                className={buttonLooks.iconGhost}
+                aria-label="Close export modal"
+              />
+            }
           >
             <X className="size-5" />
           </DialogClose>

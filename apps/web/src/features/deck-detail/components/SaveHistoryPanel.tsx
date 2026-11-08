@@ -185,7 +185,7 @@ export function SaveHistoryPanel({
             return (
               <Item
                 key={save.id}
-                className="not-data-pressed:hover:bg-background data-pressed:hover:border-ring"
+                className="not-data-pressed:hover:bg-background data-pressed:border-ring data-pressed:bg-info-surface/20 data-pressed:hover:border-ring"
                 render={
                   <Toggle
                     pressed={isSelected}
@@ -195,7 +195,11 @@ export function SaveHistoryPanel({
               >
                 <div className="flex items-center gap-3">
                   <ItemMedia>
-                    <Badge variant="order" data-selected={isSelected ? "" : undefined}>
+                    <Badge
+                      variant={null}
+                      className="flex size-6 items-center justify-center rounded-full bg-secondary p-0 text-xs font-semibold text-muted-foreground data-selected:bg-primary data-selected:text-primary-foreground"
+                      data-selected={isSelected ? "" : undefined}
+                    >
                       {isSelected ? selectionOrder : ""}
                     </Badge>
                   </ItemMedia>

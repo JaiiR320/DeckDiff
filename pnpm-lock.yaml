@@ -58,8 +58,8 @@ importers:
         specifier: ^0.4.0
         version: 0.4.0(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@jaiir320/design-system':
-        specifier: github:JaiiR320/design-system#14011662150f735f3f71e8ae94e77c3237ca65a1
-        version: https://codeload.github.com/JaiiR320/design-system/tar.gz/14011662150f735f3f71e8ae94e77c3237ca65a1(@types/react@19.2.14)(lucide-react@1.14.0(react@19.2.6))(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+        specifier: github:JaiiR320/design-system#eced34b13de96ec4b4678084caff2e0761f1acc1
+        version: https://codeload.github.com/JaiiR320/design-system/tar.gz/eced34b13de96ec4b4678084caff2e0761f1acc1(@types/react@19.2.14)(lucide-react@1.14.0(react@19.2.6))(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@neondatabase/serverless':
         specifier: ^1.0.2
         version: 1.1.0
@@ -1025,9 +1025,9 @@ packages:
   '@iarna/toml@2.2.5':
     resolution: {integrity: sha512-trnsAYxU3xnS1gPHPyU961coFyLkh4gAD/0zQ5mymY4yOZ+CYvsPqUbOFSw0aDM4y0tV7tiFxL/1XfXPNC6IPg==}
 
-  '@jaiir320/design-system@https://codeload.github.com/JaiiR320/design-system/tar.gz/14011662150f735f3f71e8ae94e77c3237ca65a1':
-    resolution: {tarball: https://codeload.github.com/JaiiR320/design-system/tar.gz/14011662150f735f3f71e8ae94e77c3237ca65a1}
-    version: 0.1.0
+  '@jaiir320/design-system@https://codeload.github.com/JaiiR320/design-system/tar.gz/eced34b13de96ec4b4678084caff2e0761f1acc1':
+    resolution: {tarball: https://codeload.github.com/JaiiR320/design-system/tar.gz/eced34b13de96ec4b4678084caff2e0761f1acc1}
+    version: 0.2.0
     peerDependencies:
       lucide-react: ^1
       react: ^19
@@ -4447,7 +4447,7 @@ snapshots:
 
   '@iarna/toml@2.2.5': {}
 
-  '@jaiir320/design-system@https://codeload.github.com/JaiiR320/design-system/tar.gz/14011662150f735f3f71e8ae94e77c3237ca65a1(@types/react@19.2.14)(lucide-react@1.14.0(react@19.2.6))(react-dom@19.2.6(react@19.2.6))(react@19.2.6)':
+  '@jaiir320/design-system@https://codeload.github.com/JaiiR320/design-system/tar.gz/eced34b13de96ec4b4678084caff2e0761f1acc1(@types/react@19.2.14)(lucide-react@1.14.0(react@19.2.6))(react-dom@19.2.6(react@19.2.6))(react@19.2.6)':
     dependencies:
       '@base-ui/react': 1.9.0(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@fontsource-variable/jetbrains-mono': 5.3.0

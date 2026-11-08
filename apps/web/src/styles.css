@@ -1,6 +1,32 @@
 @import "tailwindcss";
 @import "@jaiir320/design-system/styles.css";
 
+/* DeckDiff's own tokens, on top of the design system's theme. */
+@theme {
+  --color-surface-glass: var(--color-zinc-950);
+  --color-highlight: var(--color-cyan-300);
+  --color-highlight-strong: var(--color-cyan-200);
+
+  /* Controls laid over card art */
+  --color-on-image: var(--color-black);
+  --color-on-image-foreground: var(--color-zinc-100);
+  --color-on-image-border: var(--color-white);
+  --color-on-image-hover: oklch(1 0 0 / 15%);
+
+  /* Mana curve bars */
+  --color-chart-1: var(--color-cyan-700);
+  --color-chart-2: var(--color-cyan-300);
+
+  --tracking-brand: 0.3em;
+  --shadow-glow: 0 0 18px rgb(34 211 238 / 0.14);
+  --shadow-drag: 0 25px 50px -12px oklch(30.2% 0.056 229.695 / 0.5);
+}
+
+:root {
+  /* Drag feedback paints above every overlay. */
+  --z-drag: 1150;
+}
+
 html,
 body,
 #app {

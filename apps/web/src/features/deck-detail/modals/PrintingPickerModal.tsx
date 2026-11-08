@@ -72,7 +72,15 @@ export function PrintingPickerModal({ row, onClose, onSelect }: PrintingPickerMo
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent ref={popupRef} tabIndex={-1} initialFocus={popupRef} size="screen">
+      <DialogContent
+        ref={popupRef}
+        tabIndex={-1}
+        initialFocus={popupRef}
+        padding="none"
+        className="mx-auto max-w-7xl rounded-none border-0 bg-transparent shadow-none"
+        overlayProps={{ className: "bg-on-image/80 backdrop-blur-sm" }}
+        viewportProps={{ className: "block px-4 py-5 sm:px-6" }}
+      >
         <DialogHeader className="mb-5">
           <div className="min-w-0 flex-1">
             <DialogTitle className="text-2xl">Select a printing</DialogTitle>
@@ -87,11 +95,11 @@ export function PrintingPickerModal({ row, onClose, onSelect }: PrintingPickerMo
                 <Input
                   id="printing-set-filter"
                   aria-label="Search printings by set name"
-                  inputSize="xs"
+                  inputSize="sm"
                   value={filter}
                   onChange={(event) => setFilter(event.target.value)}
                   placeholder="Filter set name"
-                  className="mt-1 border-border-strong placeholder:text-muted-foreground"
+                  className="mt-1 rounded-lg border-border-strong placeholder:text-muted-foreground"
                 />
               </Field>
               <div>
@@ -142,6 +150,7 @@ export function PrintingPickerModal({ row, onClose, onSelect }: PrintingPickerMo
             </Empty>
           ) : status === "error" ? (
             <Alert
+              tone="destructive"
               role="alert"
               size="panel"
               className="rounded-2xl p-8 text-center font-semibold text-destructive-emphasis"
@@ -172,7 +181,10 @@ export function PrintingPickerModal({ row, onClose, onSelect }: PrintingPickerMo
                       className={`relative overflow-hidden rounded-xl bg-background shadow-xl shadow-black/30 transition group-hover:-translate-y-1 group-hover:ring-2 group-hover:ring-highlight/80 ${isSelected ? "ring-2 ring-highlight" : "ring-1 ring-border-strong"}`}
                     >
                       {isSelected ? (
-                        <Badge variant="selected" className="absolute inset-x-3 top-3 z-10">
+                        <Badge
+                          variant={null}
+                          className="absolute inset-x-3 top-3 z-10 rounded-full border border-highlight-strong/60 bg-primary/95 py-1 text-center text-xs font-bold tracking-label text-primary-foreground uppercase shadow-raised"
+                        >
                           Selected printing
                         </Badge>
                       ) : null}

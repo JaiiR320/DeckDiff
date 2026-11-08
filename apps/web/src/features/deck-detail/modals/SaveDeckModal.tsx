@@ -41,6 +41,7 @@ export function SaveDeckModal({ defaultLabel, isOpen, onClose, onSave }: SaveDec
           <Field>
             <FieldLabel>Save label (optional)</FieldLabel>
             <Input
+              inputSize="lg"
               ref={inputRef}
               id="save-label"
               name="label"

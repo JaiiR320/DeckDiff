@@ -37,6 +37,7 @@ export function CreateDeckModal({
           <Field>
             <FieldLabel>{label}</FieldLabel>
             <Input
+              inputSize="lg"
               value={deckName}
               onChange={(event) => onDeckNameChange(event.target.value)}
               placeholder={placeholder}

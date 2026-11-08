@@ -209,7 +209,7 @@ export function DeckActionsModal({
         if (!open) handleClose();
       }}
     >
-      <DialogContent size="settings" className="flex h-[736px] max-h-[85vh] flex-col">
+      <DialogContent className="flex h-[736px] max-h-[85vh] max-w-[800px] flex-col">
         <DialogTitle>{deck.name}</DialogTitle>
         <Tabs
           value={activeTab}
@@ -355,6 +355,7 @@ function GeneralSettingsTab({
         <form onSubmit={onRenameSubmit} className="space-y-3">
           <Label htmlFor="deck-rename">New name</Label>
           <Input
+            inputSize="lg"
             id="deck-rename"
             value={newName}
             onChange={(event) => setState({ newName: event.target.value })}
@@ -391,23 +392,11 @@ function GeneralSettingsTab({
                 Used to clamp flexible mana production stats.
               </p>
             </div>
-            <ToggleGroup
-              aria-labelledby={colorsTitleId}
-              variant="round"
-              multiple
-              value={draftColors}
-              onValueChange={(colors: DeckColor[]) =>
-                onDraftColorsChange(
-                  DECK_COLORS.flatMap(({ color }) => (colors.includes(color) ? [color] : [])),
-                )
-              }
-            >
-              {DECK_COLORS.map(({ color, label }) => (
-                <ToggleGroupItem key={color} value={color} aria-label={label} title={label}>
-                  <ManaSymbolIcon symbol={color} label={label} className="size-7" />
-                </ToggleGroupItem>
-              ))}
-            </ToggleGroup>
+            <DeckColorPicker
+              labelledBy={colorsTitleId}
+              colors={draftColors}
+              onColorsChange={onDraftColorsChange}
+            />
           </div>
         </Card>
       ) : null}
@@ -533,7 +522,7 @@ function GeneralSettingsTab({
       ) : null}
 
       {showDeleteConfirm ? (
-        <Alert role="alert" tone="danger">
+        <Alert role="alert" tone="destructive">
           <AlertDescription>
             Are you sure? This will delete the deck and all {deck.saves.length} snapshot
             {deck.saves.length === 1 ? "" : "s"}.
@@ -570,6 +559,45 @@ function GeneralSettingsTab({
         </Button>
       )}
     </div>
+  );
+}
+
+const colorSwatchClassName =
+  "size-10 rounded-full border border-border bg-background p-0 opacity-30 grayscale not-data-pressed:hover:border-border-strong not-data-pressed:hover:opacity-60 data-pressed:border-on-image-border/40 data-pressed:opacity-100 data-pressed:grayscale-0 data-pressed:shadow-glow";
+
+/** Mana color swatches: DeckDiff's own look on the design system's ToggleGroup. */
+function DeckColorPicker({
+  labelledBy,
+  colors,
+  onColorsChange,
+}: {
+  labelledBy: string;
+  colors: DeckColor[];
+  onColorsChange: (colors: DeckColor[]) => void;
+}) {
+  return (
+    <ToggleGroup
+      aria-labelledby={labelledBy}
+      variant={null}
+      className="flex shrink-0 gap-2"
+      multiple
+      value={colors}
+      onValueChange={(next: DeckColor[]) =>
+        onColorsChange(DECK_COLORS.flatMap(({ color }) => (next.includes(color) ? [color] : [])))
+      }
+    >
+      {DECK_COLORS.map(({ color, label }) => (
+        <ToggleGroupItem
+          key={color}
+          value={color}
+          aria-label={label}
+          title={label}
+          className={colorSwatchClassName}
+        >
+          <ManaSymbolIcon symbol={color} label={label} className="size-7" />
+        </ToggleGroupItem>
+      ))}
+    </ToggleGroup>
   );
 }
 
@@ -648,7 +676,7 @@ function CategoriesSettingsTab({
           onChange={(event) => setState({ newCategoryName: event.target.value })}
           placeholder="New category"
           aria-label="New category"
-          inputSize="sm"
+          inputSize="md"
           className="flex-1"
         />
         <Button type="submit" variant="default" size="sm">
@@ -759,7 +787,7 @@ function CategorySettingsRow({
             value={categoryName}
             onChange={(event) => setState({ categoryName: event.target.value })}
             aria-label="Category name"
-            inputSize="sm"
+            inputSize="md"
             className="flex-1 bg-background"
           />
           <Button type="submit" variant="default" size="sm">
