@@ -1,5 +1,7 @@
 import { CollisionPriority } from "@dnd-kit/abstract";
 import { useDroppable } from "@dnd-kit/react";
+import { Button } from "@jaiir320/design-system/components/button";
+import { Empty } from "@jaiir320/design-system/components/empty";
 import type { ReactNode } from "react";
 import type { CardCategory } from "#/lib/decklist";
 import { laneId } from "./stackIds";
@@ -8,6 +10,8 @@ type CategoryLaneProps = {
   laneIndex: number;
   categories: CardCategory[];
   hasPreview: boolean;
+  /** Writable lanes take focus so Shift+F10 / the ContextMenu key can open the lane menu. */
+  focusable?: boolean;
   onLaneRef: (element: HTMLDivElement | null) => void;
   onRemoveLane?: (laneIndex: number) => void;
   children: ReactNode;
@@ -17,6 +21,7 @@ export function CategoryLane({
   laneIndex,
   categories,
   hasPreview,
+  focusable = false,
   onLaneRef,
   onRemoveLane,
   children,
@@ -34,21 +39,31 @@ export function CategoryLane({
         ref(element);
         onLaneRef(element);
       }}
-      className="flex min-h-80 min-w-0 flex-col gap-3 p-1"
+      {...(focusable && {
+        "data-stack-lane": "",
+        "data-lane-index": laneIndex,
+        tabIndex: 0,
+        "aria-label": `Lane ${laneIndex + 1}`,
+      })}
+      className={`flex min-h-80 min-w-0 flex-col gap-3 p-1 ${
+        focusable
+          ? "outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          : ""
+      }`}
     >
       {categories.length === 0 && !hasPreview ? (
-        <div className="flex min-h-64 flex-col items-center justify-center gap-3 rounded-xl bg-zinc-900/25 px-4 text-center text-sm font-semibold text-zinc-600">
+        <Empty className="min-h-64 gap-3 rounded-xl bg-surface/25 px-4 font-semibold text-faint-foreground">
           <span>Empty lane</span>
           {onRemoveLane ? (
-            <button
-              type="button"
+            <Button
+              size="xs"
               onClick={() => onRemoveLane(laneIndex)}
-              className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-1.5 text-sm font-medium text-zinc-300 transition hover:border-zinc-700 hover:text-zinc-100"
+              className="bg-background hover:bg-background hover:text-foreground"
             >
               Remove lane
-            </button>
+            </Button>
           ) : null}
-        </div>
+        </Empty>
       ) : (
         children
       )}

@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { Layers, MoreVertical } from "lucide-react";
-import { IconButton } from "#/components/ui/IconButton";
+import { Button } from "@jaiir320/design-system/components/button";
+import { Card } from "@jaiir320/design-system/components/card";
 import type { DeckItem, DeckTileCover, DeckTileCoverCard } from "../../lib/deck";
 import { getImageCropStyle } from "../../lib/imageCrop";
 
@@ -9,36 +10,40 @@ type DeckCardProps = {
   onEdit: (deck: DeckItem) => void;
 };
 
+const tileClassName =
+  "group relative flex aspect-3/2 min-h-48 flex-col rounded-2xl text-left transition hover:border-border-strong sm:min-h-0";
+
 export function DeckCard({ deck, onEdit }: DeckCardProps) {
-  const editButton = (
-    <IconButton
+  const editButton = (className: string) => (
+    <Button
       onClick={(e) => {
         e.preventDefault();
         e.stopPropagation();
         onEdit(deck);
       }}
       aria-label={`Edit ${deck.name}`}
-      variant="ghost"
-      className="absolute right-6 top-6 z-20 cursor-pointer p-2 opacity-0 group-hover:opacity-100"
+      variant="icon-ghost"
+      size="icon"
+      className={`absolute right-6 top-6 z-20 cursor-pointer ${className}`}
     >
       <MoreVertical className="size-5" strokeWidth={1.75} />
-    </IconButton>
+    </Button>
   );
 
   if (deck.cover) {
     return (
-      <div className="group relative flex aspect-[3/2] min-h-48 flex-col overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950 text-left transition hover:border-zinc-700 sm:min-h-0">
+      <Card className={`${tileClassName} overflow-hidden`}>
         <CoverImage cover={deck.cover} />
-        <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/85 to-transparent" />
-        <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/85 to-transparent" />
+        <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-on-image/85 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-on-image/85 to-transparent" />
         <div className="pointer-events-none relative z-10 flex h-full flex-col justify-between px-7 py-6 pr-16">
           <div className="flex items-center gap-3">
-            <Layers className="size-8 shrink-0 text-cyan-300 drop-shadow-lg" strokeWidth={1.75} />
-            <span className="text-3xl font-semibold tracking-tight text-zinc-100 drop-shadow-lg">
+            <Layers className="size-8 shrink-0 text-highlight drop-shadow-lg" strokeWidth={1.75} />
+            <span className="text-3xl font-semibold tracking-tight text-foreground drop-shadow-lg">
               {deck.name}
             </span>
           </div>
-          <p className="mt-2 text-lg text-zinc-300 drop-shadow-lg">
+          <p className="mt-2 text-lg text-secondary-foreground drop-shadow-lg">
             {deck.saves.length} snapshot{deck.saves.length === 1 ? "" : "s"}
           </p>
         </div>
@@ -50,31 +55,20 @@ export function DeckCard({ deck, onEdit }: DeckCardProps) {
           aria-label={`Open ${deck.name}`}
         />
 
-        <IconButton
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onEdit(deck);
-          }}
-          aria-label={`Edit ${deck.name}`}
-          variant="ghost"
-          className="absolute right-6 top-6 z-20 cursor-pointer bg-black/35 p-2 text-zinc-100 backdrop-blur-sm hover:bg-black/50"
-        >
-          <MoreVertical className="size-5" strokeWidth={1.75} />
-        </IconButton>
-      </div>
+        {editButton("bg-on-image/35 backdrop-blur-sm")}
+      </Card>
     );
   }
 
   return (
-    <div className="group relative flex aspect-[3/2] min-h-48 flex-col rounded-2xl border border-zinc-800 bg-zinc-950 px-7 py-6 text-left transition hover:border-zinc-700 sm:min-h-0">
+    <Card className={`${tileClassName} px-7 py-6`}>
       <div className="pointer-events-none flex items-center gap-3 pr-10">
-        <Layers className="size-8 shrink-0 text-cyan-300" strokeWidth={1.75} />
-        <span className="text-3xl font-semibold tracking-tight text-zinc-100">{deck.name}</span>
+        <Layers className="size-8 shrink-0 text-highlight" strokeWidth={1.75} />
+        <span className="text-3xl font-semibold tracking-tight text-foreground">{deck.name}</span>
       </div>
 
       <div className="pointer-events-none mt-auto">
-        <p className="mt-2 text-lg text-zinc-500">
+        <p className="mt-2 text-lg text-muted-foreground">
           {deck.saves.length} snapshot{deck.saves.length === 1 ? "" : "s"}
         </p>
       </div>
@@ -87,9 +81,9 @@ export function DeckCard({ deck, onEdit }: DeckCardProps) {
         aria-label={`Open ${deck.name}`}
       />
 
-      {/* Edit button - positioned outside content, after Link in DOM so it's on top */}
-      {editButton}
-    </div>
+      {/* Edit button - after Link in DOM so it's on top; hover or keyboard focus reveals it */}
+      {editButton("opacity-0 group-focus-within:opacity-100 group-hover:opacity-100")}
+    </Card>
   );
 }
 

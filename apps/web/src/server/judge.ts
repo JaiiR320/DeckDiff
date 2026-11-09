@@ -42,7 +42,7 @@ function getUnresolvedCardResponse(
 }
 
 export const sendJudgeQuestionToBackend = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) => judgeRequestSchema.parse(data))
+  .validator((data: unknown) => judgeRequestSchema.parse(data))
   .handler(async ({ data }) => {
     const apiKey = process.env.OPENCODE_API_KEY?.trim();
     if (!apiKey) {

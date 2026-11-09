@@ -1,7 +1,19 @@
+import { Alert, AlertActions, AlertDescription } from "@jaiir320/design-system/components/alert";
+import { Badge } from "@jaiir320/design-system/components/badge";
+import { Button } from "@jaiir320/design-system/components/button";
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemGroup,
+  ItemMedia,
+  ItemTitle,
+} from "@jaiir320/design-system/components/item";
+import { Separator } from "@jaiir320/design-system/components/separator";
+import { Toggle } from "@jaiir320/design-system/components/toggle";
 import { ArrowLeft } from "lucide-react";
-import { useState } from "react";
-import { Alert } from "#/components/ui/Alert";
-import { Button } from "#/components/ui/Button";
+import { useEffect, useRef, useState } from "react";
 import type { DeckItem, DeckSave } from "#/lib/deck";
 import { groupSaveHistoryItems, isAutoSaveLabel } from "./saveHistoryItems";
 
@@ -35,6 +47,13 @@ export function SaveHistoryPanel({
   const [collapseUnnamedSaves, setCollapseUnnamedSaves] = useState(true);
   const [pendingLoadSaveId, setPendingLoadSaveId] = useState<string | null>(null);
   const [selectedSaves, setSelectedSaves] = useState<string[]>([]);
+  const loadTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const cancelLoadRef = useRef<HTMLButtonElement>(null);
+
+  // The inline confirm takes focus on its safe choice when revealed.
+  useEffect(() => {
+    if (pendingLoadSaveId) cancelLoadRef.current?.focus();
+  }, [pendingLoadSaveId]);
 
   // Newest first
   const saves = [...deck.saves].reverse();
@@ -68,12 +87,17 @@ export function SaveHistoryPanel({
     }
   }
 
+  function closeLoadConfirm() {
+    setPendingLoadSaveId(null);
+    loadTriggerRef.current?.focus();
+  }
+
   if (saves.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 p-8 text-center">
-        <p className="text-zinc-500">No saves yet. Save your deck to create a snapshot.</p>
+        <p className="text-muted-foreground">No saves yet. Save your deck to create a snapshot.</p>
         <Button onClick={onBackToEditor}>
-          <ArrowLeft className="size-4" />
+          <ArrowLeft />
           Back to Editor
         </Button>
       </div>
@@ -85,32 +109,29 @@ export function SaveHistoryPanel({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-zinc-100">Snapshot History</h2>
-          <p className="mt-1 text-sm text-zinc-500">
+          <h2 className="text-lg font-semibold text-foreground">Snapshot History</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
             {saves.length} snapshot{saves.length === 1 ? "" : "s"}
           </p>
         </div>
         <div className="flex items-center gap-2">
           {hasAutoSaves && (
-            <Button
-              onClick={() => setCollapseUnnamedSaves((current) => !current)}
-              size="sm"
-              variant="secondary"
-            >
+            <Button size="sm" onClick={() => setCollapseUnnamedSaves((current) => !current)}>
               {collapseUnnamedSaves ? "Show unnamed saves" : "Collapse unnamed saves"}
             </Button>
           )}
           {saves.length >= 2 && (
             <Button
-              onClick={toggleCompareMode}
               size="sm"
-              variant={compareMode ? "primary" : "secondary"}
+              variant={compareMode ? "default" : "outline"}
+              aria-pressed={compareMode}
+              onClick={toggleCompareMode}
             >
               {compareMode ? "Cancel Compare" : "Compare"}
             </Button>
           )}
-          <Button onClick={onBackToEditor} size="sm">
-            <ArrowLeft className="size-4" />
+          <Button size="sm" onClick={onBackToEditor}>
+            <ArrowLeft />
             Back
           </Button>
         </div>
@@ -118,112 +139,110 @@ export function SaveHistoryPanel({
 
       {/* Compare instructions */}
       {compareMode && (
-        <Alert tone="info" className="p-4">
-          <p>Select 2 snapshots to compare. Shows diff between older (left) and newer (right).</p>
+        <Alert tone="info">
+          <AlertDescription>
+            Select 2 snapshots to compare. Shows diff between older (left) and newer (right).
+          </AlertDescription>
           {selectedSaves.length === 2 && (
-            <Button
-              onClick={handleCompare}
-              variant="primary"
-              size="sm"
-              className="mt-3 rounded-lg py-1.5"
-            >
-              Compare Selected
-            </Button>
+            <AlertActions>
+              <Button variant="default" size="sm" onClick={handleCompare}>
+                Compare Selected
+              </Button>
+            </AlertActions>
           )}
         </Alert>
       )}
 
       {/* Saves list */}
-      <div className="space-y-2">
+      <ItemGroup {...(compareMode && { role: "group", "aria-label": "Snapshots to compare" })}>
         {historyItems.map((item) => {
           if (item.kind === "collapsed") {
             return (
-              <div key={item.id} className="flex items-center gap-3 py-2 text-sm text-zinc-500">
-                <div className="h-px flex-1 bg-zinc-800" />
+              <div
+                key={item.id}
+                className="flex items-center gap-3 py-2 text-sm text-muted-foreground"
+              >
+                <Separator className="flex-1" />
                 <span>
                   {item.count} unnamed save{item.count === 1 ? "" : "s"} collapsed
                 </span>
-                <div className="h-px flex-1 bg-zinc-800" />
+                <Separator className="flex-1" />
               </div>
             );
           }
 
           const { save } = item;
-          const isSelected = selectedSaves.includes(save.id);
-          const isPendingLoad = pendingLoadSaveId === save.id;
-          const selectionOrder = selectedSaves.indexOf(save.id) + 1;
-          const saveContent = (
-            <>
-              <div className="flex items-center gap-3">
-                {compareMode && (
-                  <div
-                    className={`flex size-6 items-center justify-center rounded-full text-xs font-semibold ${
-                      isSelected ? "bg-cyan-400 text-cyan-950" : "bg-zinc-800 text-zinc-500"
-                    }`}
-                  >
-                    {isSelected ? selectionOrder : ""}
-                  </div>
-                )}
-                <div>
-                  <p className="font-medium text-zinc-100">{save.label}</p>
-                  <p className="text-sm text-zinc-500">{formatDate(save.savedAt)}</p>
-                </div>
-              </div>
-
-              {!compareMode && (
-                <Button
-                  onClick={() => setPendingLoadSaveId(save.id)}
-                  size="sm"
-                  className="rounded-lg py-1.5"
-                >
-                  Load
-                </Button>
-              )}
-            </>
+          const title = (
+            <ItemContent>
+              <ItemTitle>{save.label}</ItemTitle>
+              <ItemDescription className="mt-0">{formatDate(save.savedAt)}</ItemDescription>
+            </ItemContent>
           );
 
           if (compareMode) {
+            const selectionOrder = selectedSaves.indexOf(save.id) + 1;
+            const isSelected = selectionOrder > 0;
             return (
-              <button
+              <Item
                 key={save.id}
-                type="button"
-                onClick={() => toggleSaveSelection(save.id)}
-                className={`flex w-full items-center justify-between rounded-xl border p-4 text-left transition ${
-                  isSelected
-                    ? "border-cyan-500 bg-cyan-950/20 cursor-pointer"
-                    : "border-zinc-800 bg-zinc-950 cursor-pointer hover:border-zinc-700"
-                }`}
+                className="not-data-pressed:hover:bg-background data-pressed:hover:border-ring"
+                render={
+                  <Toggle
+                    pressed={isSelected}
+                    onPressedChange={() => toggleSaveSelection(save.id)}
+                  />
+                }
               >
-                {saveContent}
-              </button>
+                <div className="flex items-center gap-3">
+                  <ItemMedia>
+                    <Badge variant="order" data-selected={isSelected ? "" : undefined}>
+                      {isSelected ? selectionOrder : ""}
+                    </Badge>
+                  </ItemMedia>
+                  {title}
+                </div>
+              </Item>
             );
           }
 
+          const isPendingLoad = pendingLoadSaveId === save.id;
           return (
-            <div
-              key={save.id}
-              className="space-y-3 rounded-xl border border-zinc-800 bg-zinc-950 p-4 transition"
-            >
-              <div className="flex items-center justify-between">{saveContent}</div>
+            // No column gap: the old title and Load sat flush, so long titles wrap only where they did before.
+            <Item key={save.id} className="flex-wrap gap-x-0 gap-y-3">
+              {title}
+              <ItemActions>
+                <Button
+                  size="sm"
+                  aria-expanded={isPendingLoad}
+                  onClick={(event) => {
+                    loadTriggerRef.current = event.currentTarget;
+                    setPendingLoadSaveId(save.id);
+                  }}
+                >
+                  Load
+                </Button>
+              </ItemActions>
               {isPendingLoad ? (
-                <Alert tone="warning" className="p-4">
-                  <p>Loading this snapshot will overwrite your current live deck.</p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <Button
-                      onClick={() => setPendingLoadSaveId(null)}
-                      size="sm"
-                      className="rounded-lg py-1.5"
-                    >
+                <Alert
+                  role="alert"
+                  tone="warning"
+                  className="basis-full"
+                  aria-label={`Confirm load ${save.label}`}
+                >
+                  <AlertDescription>
+                    Loading this snapshot will overwrite your current live deck.
+                  </AlertDescription>
+                  <AlertActions>
+                    <Button ref={cancelLoadRef} size="sm" onClick={closeLoadConfirm}>
                       Cancel
                     </Button>
                     <Button
-                      variant="primary"
+                      variant="default"
                       size="sm"
                       onClick={() => {
-                        setPendingLoadSaveId(null);
+                        closeLoadConfirm();
                         onSaveSnapshotBeforeLoad(save);
                       }}
-                      className="rounded-lg py-1.5"
                     >
                       Save Snapshot
                     </Button>
@@ -231,20 +250,19 @@ export function SaveHistoryPanel({
                       variant="warning"
                       size="sm"
                       onClick={() => {
-                        setPendingLoadSaveId(null);
+                        closeLoadConfirm();
                         onLoadSave(save);
                       }}
-                      className="rounded-lg py-1.5"
                     >
                       Load Anyways
                     </Button>
-                  </div>
+                  </AlertActions>
                 </Alert>
               ) : null}
-            </div>
+            </Item>
           );
         })}
-      </div>
+      </ItemGroup>
     </div>
   );
 }

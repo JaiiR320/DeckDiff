@@ -15,14 +15,23 @@ import {
 } from "lucide-react";
 import { useEffect, useReducer, useRef } from "react";
 import type { FormEvent } from "react";
+import { Alert, AlertActions, AlertDescription } from "@jaiir320/design-system/components/alert";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbSeparator,
+} from "@jaiir320/design-system/components/breadcrumb";
+import { Button } from "@jaiir320/design-system/components/button";
+import { Card } from "@jaiir320/design-system/components/card";
+import { Dialog, DialogContent, DialogTitle } from "@jaiir320/design-system/components/dialog";
+import { Field, FieldLabel } from "@jaiir320/design-system/components/field";
+import { Input } from "@jaiir320/design-system/components/input";
 import { DeckActionsModal } from "#/components/decks/DeckActionsModal";
 import { CreateDeckModal } from "#/components/decks/CreateDeckModal";
 import { DeckCard } from "#/components/decks/DeckCard";
 import { ImageCropModal } from "#/components/decks/ImageCropModal";
-import { Button } from "#/components/ui/Button";
-import { IconButton } from "#/components/ui/IconButton";
-import { Input } from "#/components/ui/Input";
-import { Modal } from "#/components/ui/Modal";
 import type { DeckFolderView, DeckItem } from "#/lib/deck";
 import { swapSplitDeckCover } from "#/lib/deckCover";
 import { createDeckExport } from "#/lib/deckExport";
@@ -62,6 +71,7 @@ type FolderCardProps = {
   path: string;
   onOpen: (path: string) => void;
   onEdit: (folder: DeckFolderView["folders"][number]) => void;
+  onFocus: () => void;
 };
 
 type EditableFolder = NonNullable<DecksPageState["editingFolder"]>;
@@ -173,6 +183,15 @@ export function DecksPage() {
 
   function openFolder(folderPath: string) {
     void navigate({ to: "/decks", search: folderSearch(folderPath) });
+  }
+
+  // Keyboard focus keeps the focused folder inside the translated carousel window.
+  function revealFolder(index: number) {
+    if (folderViewportRef.current) folderViewportRef.current.scrollLeft = 0;
+    if (index < clampedFolderOffset) setState({ folderOffset: index });
+    else if (index >= clampedFolderOffset + visibleFolderSlots) {
+      setState({ folderOffset: index - visibleFolderSlots + 1 });
+    }
   }
 
   function closeCreateModal() {
@@ -442,7 +461,7 @@ export function DecksPage() {
   function handleExportDeck(deck: DeckItem) {
     const deckExport = createDeckExport(deck);
     if (!deckExport.ok) {
-      alert(deckExport.reason);
+      setState({ editingDeck: null, errorMessage: deckExport.reason });
       return;
     }
 
@@ -468,9 +487,9 @@ export function DecksPage() {
     <>
       <main className="mx-auto w-full p-8">
         {errorMessage ? (
-          <p className="mb-6 rounded-xl border border-rose-900/40 bg-rose-950/30 px-4 py-3 text-sm text-rose-300">
+          <Alert render={<p />} role="alert" className="mb-6">
             {errorMessage}
-          </p>
+          </Alert>
         ) : null}
 
         <div className="mx-auto max-w-[74.5rem]">
@@ -486,7 +505,8 @@ export function DecksPage() {
                 New Folder
               </Button>
               {view.currentFolder ? (
-                <IconButton
+                <Button
+                  size="icon"
                   aria-label={`Open ${view.currentFolder.name} settings`}
                   onClick={() =>
                     setState({
@@ -496,24 +516,24 @@ export function DecksPage() {
                       showFolderDeleteConfirm: false,
                     })
                   }
-                  className="p-2"
                 >
                   <MoreVertical className="size-4" strokeWidth={1.75} />
-                </IconButton>
+                </Button>
               ) : null}
             </div>
           </div>
 
           {displayedFolders.length > 0 ? (
             <section className="relative mb-5">
-              <IconButton
+              <Button
+                size="icon"
                 aria-label="Show previous folder"
                 disabled={clampedFolderOffset === 0}
                 onClick={() => setState({ folderOffset: Math.max(0, clampedFolderOffset - 1) })}
-                className="absolute left-0 top-1/2 z-20 -translate-x-[calc(100%+1.25rem)] -translate-y-1/2 p-2"
+                className="absolute left-0 top-1/2 z-20 -translate-x-[calc(100%+1.25rem)] -translate-y-1/2"
               >
                 <ChevronLeft className="size-5" strokeWidth={1.75} />
-              </IconButton>
+              </Button>
               <DragDropProvider onDragEnd={handleFolderDragEnd}>
                 <div ref={folderViewportRef} className="overflow-hidden">
                   <div
@@ -522,7 +542,7 @@ export function DecksPage() {
                       transform: `translateX(calc(-${clampedFolderOffset} * (24rem + 1.25rem)))`,
                     }}
                   >
-                    {displayedFolders.map((folder) => {
+                    {displayedFolders.map((folder, index) => {
                       const folderPath = view.currentFolderPath
                         ? `${view.currentFolderPath}/${folder.slug}`
                         : folder.slug;
@@ -532,6 +552,7 @@ export function DecksPage() {
                           folder={folder}
                           path={folderPath}
                           onOpen={openFolder}
+                          onFocus={() => revealFolder(index)}
                           onEdit={(nextFolder) =>
                             setState({
                               editingFolder: nextFolder,
@@ -546,16 +567,17 @@ export function DecksPage() {
                   </div>
                 </div>
               </DragDropProvider>
-              <IconButton
+              <Button
+                size="icon"
                 aria-label="Show next folder"
                 disabled={clampedFolderOffset >= maxFolderOffset}
                 onClick={() =>
                   setState({ folderOffset: Math.min(maxFolderOffset, clampedFolderOffset + 1) })
                 }
-                className="absolute right-0 top-1/2 z-20 translate-x-[calc(100%+1.25rem)] -translate-y-1/2 p-2"
+                className="absolute right-0 top-1/2 z-20 translate-x-[calc(100%+1.25rem)] -translate-y-1/2"
               >
                 <ChevronRight className="size-5" strokeWidth={1.75} />
-              </IconButton>
+              </Button>
             </section>
           ) : null}
 
@@ -570,7 +592,7 @@ export function DecksPage() {
           </section>
 
           {!hasItems ? (
-            <p className="mt-8 text-sm text-zinc-500">
+            <p className="mt-8 text-sm text-muted-foreground">
               This folder is empty. Create a deck or folder to get started.
             </p>
           ) : null}
@@ -750,38 +772,35 @@ function Breadcrumbs({
   const isRootCurrent = breadcrumbs.length === 0;
 
   return (
-    <nav
-      className="flex flex-wrap items-center gap-2 text-sm text-zinc-500"
-      aria-label="Deck folders"
-    >
-      <button
-        type="button"
-        onClick={() => onOpen("")}
-        className={isRootCurrent ? "text-zinc-100" : "text-zinc-500 hover:text-zinc-200"}
-      >
-        Decks
-      </button>
-      {breadcrumbs.map((breadcrumb, index) => {
-        const isCurrent = index === breadcrumbs.length - 1;
-
-        return (
-          <span key={breadcrumb.id} className="inline-flex items-center gap-2">
-            <ChevronRight className="size-4" strokeWidth={1.75} />
-            <button
-              type="button"
+    <Breadcrumb aria-label="Deck folders">
+      <BreadcrumbList>
+        <BreadcrumbItem>
+          <BreadcrumbLink
+            render={<button type="button" />}
+            aria-current={isRootCurrent ? "page" : undefined}
+            onClick={() => onOpen("")}
+          >
+            Decks
+          </BreadcrumbLink>
+        </BreadcrumbItem>
+        {breadcrumbs.map((breadcrumb, index) => [
+          <BreadcrumbSeparator key={`${breadcrumb.id}-separator`} />,
+          <BreadcrumbItem key={breadcrumb.id}>
+            <BreadcrumbLink
+              render={<button type="button" />}
+              aria-current={index === breadcrumbs.length - 1 ? "page" : undefined}
               onClick={() => onOpen(breadcrumb.path)}
-              className={isCurrent ? "text-zinc-100" : "text-zinc-500 hover:text-zinc-200"}
             >
               {breadcrumb.name}
-            </button>
-          </span>
-        );
-      })}
-    </nav>
+            </BreadcrumbLink>
+          </BreadcrumbItem>,
+        ])}
+      </BreadcrumbList>
+    </Breadcrumb>
   );
 }
 
-function FolderCard({ folder, path, onOpen, onEdit }: FolderCardProps) {
+function FolderCard({ folder, path, onOpen, onEdit, onFocus }: FolderCardProps) {
   const {
     isDragging,
     ref: draggableRef,
@@ -798,57 +817,61 @@ function FolderCard({ folder, path, onOpen, onEdit }: FolderCardProps) {
   });
 
   return (
-    <div
-      ref={(element) => {
+    <Card
+      ref={(element: HTMLDivElement | null) => {
         draggableRef(element);
         droppableRef(element);
       }}
-      className={`group relative flex min-h-24 w-96 shrink-0 flex-col justify-center overflow-hidden rounded-2xl border bg-zinc-950 px-5 py-4 text-left transition hover:border-zinc-700 ${
-        isDropTarget ? "border-cyan-700/70" : "border-zinc-800"
+      onFocus={onFocus}
+      className={`group relative flex min-h-24 w-96 shrink-0 flex-col justify-center overflow-hidden rounded-2xl px-5 py-4 text-left transition hover:border-border-strong ${
+        isDropTarget ? "border-cyan-700/70" : ""
       } ${isDragging ? "opacity-50" : "opacity-100"}`}
     >
       {folder.background ? <FolderBackgroundImage folder={folder} /> : null}
-      {folder.background ? <div className="absolute inset-0 bg-black/45" /> : null}
+      {folder.background ? <div className="absolute inset-0 bg-on-image/45" /> : null}
       <div className="pointer-events-none relative z-10 grid grid-cols-[1.75rem_1fr] items-center gap-x-3 gap-y-2 pr-24">
-        <Folder className="size-7 shrink-0 text-amber-300" strokeWidth={1.75} />
-        <span className="truncate text-2xl font-semibold tracking-tight text-zinc-100">
+        <Folder className="size-7 shrink-0 text-warning-text" strokeWidth={1.75} />
+        <span className="truncate text-2xl font-semibold tracking-tight text-foreground">
           {folder.name}
         </span>
-        <p className="col-span-2 text-sm text-zinc-500">
+        <p className="col-span-2 text-sm text-muted-foreground">
           {folder.folderCount} folder{folder.folderCount === 1 ? "" : "s"} | {folder.deckCount} deck
           {folder.deckCount === 1 ? "" : "s"}
         </p>
       </div>
-      <button
-        type="button"
+      <Button
+        variant="ghost"
+        size="none"
         onClick={() => onOpen(path)}
-        className="absolute inset-0 rounded-2xl"
+        className="absolute inset-0 rounded-2xl hover:bg-transparent"
         aria-label={`Open ${folder.name}`}
       />
-      <div className="absolute right-4 top-4 z-20 flex items-center rounded-xl border border-zinc-800 bg-zinc-950/90 p-1 opacity-0 shadow-lg shadow-black/20 transition group-hover:opacity-100">
-        <button
+      <div className="absolute right-4 top-4 z-20 flex items-center rounded-xl border border-border bg-background/90 p-1 opacity-0 shadow-lg shadow-black/20 transition group-focus-within:opacity-100 group-hover:opacity-100">
+        <Button
           ref={handleRef}
-          type="button"
+          variant="ghost"
+          size="none"
           onClick={(event) => event.stopPropagation()}
-          className="cursor-grab rounded-lg p-2 text-zinc-500 transition hover:bg-zinc-900 hover:text-zinc-200 active:cursor-grabbing"
+          className="cursor-grab rounded-lg p-2 text-muted-foreground active:cursor-grabbing"
           aria-label={`Reorder ${folder.name}`}
         >
           <GripVertical className="size-4" strokeWidth={1.75} />
-        </button>
-        <IconButton
+        </Button>
+        <Button
           onClick={(event) => {
             event.preventDefault();
             event.stopPropagation();
             onEdit(folder);
           }}
           aria-label={`Open ${folder.name} settings`}
-          variant="ghost"
-          className="cursor-pointer rounded-lg p-2"
+          variant="icon-ghost"
+          size="icon"
+          className="cursor-pointer"
         >
           <MoreVertical className="size-4" strokeWidth={1.75} />
-        </IconButton>
+        </Button>
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -900,85 +923,105 @@ function FolderSettingsModal({
   onDelete: () => void;
   onDeleteConfirmChange: (showDeleteConfirm: boolean) => void;
 }) {
+  const cancelDeleteRef = useRef<HTMLButtonElement>(null);
+  const deleteFolderRef = useRef<HTMLButtonElement>(null);
+  const wasConfirmingDelete = useRef(false);
+
+  // Inline confirm: focus the safe Cancel on reveal, return focus to the trigger after Cancel.
+  useEffect(() => {
+    if (showDeleteConfirm) cancelDeleteRef.current?.focus();
+    else if (wasConfirmingDelete.current) deleteFolderRef.current?.focus();
+    wasConfirmingDelete.current = showDeleteConfirm;
+  }, [showDeleteConfirm]);
+
   return (
-    <Modal ariaLabel="Close folder settings modal" onClose={onClose}>
-      <h1 className="text-xl font-semibold text-zinc-100">{folder.name}</h1>
-      <form className="mt-5 space-y-3" onSubmit={onRename}>
-        <label className="block text-sm font-medium text-zinc-400" htmlFor="folder-name">
-          Folder name
-        </label>
-        <Input
-          id="folder-name"
-          value={folderName}
-          onChange={(event) => onFolderNameChange(event.target.value)}
-          placeholder="Enter a folder name"
-          className="w-full"
-        />
-        <div className="flex gap-2">
-          <Button onClick={onClose} className="flex-1">
-            Cancel
-          </Button>
-          <Button type="submit" variant="primary" className="flex-1">
-            <Pencil className="size-4" strokeWidth={1.75} />
-            Rename
-          </Button>
-        </div>
-      </form>
-
-      <div className="mt-5 rounded-xl border border-zinc-800 bg-zinc-900/40 p-4">
-        <label className="block text-sm font-medium text-zinc-400" htmlFor="folder-background-url">
-          Background image URL
-        </label>
-        <Input
-          id="folder-background-url"
-          value={folderBackgroundUrl}
-          onChange={(event) => onFolderBackgroundUrlChange(event.target.value)}
-          placeholder="https://cards.scryfall.io/..."
-          className="mt-3 w-full"
-        />
-        <div className="mt-3 flex flex-wrap gap-2">
-          <Button onClick={onSaveBackground} className="flex-1">
-            <Image className="size-4" strokeWidth={1.75} />
-            Save background
-          </Button>
-          {folder.background ? (
-            <Button onClick={onEditBackgroundCrop} className="flex-1">
-              <Image className="size-4" strokeWidth={1.75} />
-              Edit crop
-            </Button>
-          ) : null}
-          {folder.background ? (
-            <Button onClick={onClearBackground} className="flex-1">
-              <ImageOff className="size-4" strokeWidth={1.75} />
-              Clear
-            </Button>
-          ) : null}
-        </div>
-      </div>
-
-      {showDeleteConfirm ? (
-        <div className="mt-5 rounded-xl border border-rose-900/40 bg-rose-950/20 p-4 text-sm text-rose-200">
-          <p>Delete this empty folder?</p>
-          <div className="mt-3 flex gap-2">
-            <Button onClick={() => onDeleteConfirmChange(false)} className="flex-1">
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent>
+        <DialogTitle>{folder.name}</DialogTitle>
+        <form className="mt-5 space-y-3" onSubmit={onRename}>
+          <Field className="gap-3">
+            <FieldLabel>Folder name</FieldLabel>
+            <Input
+              value={folderName}
+              onChange={(event) => onFolderNameChange(event.target.value)}
+              placeholder="Enter a folder name"
+            />
+          </Field>
+          <div className="flex gap-2">
+            <Button onClick={onClose} className="flex-1">
               Cancel
             </Button>
-            <Button variant="danger" onClick={onDelete} className="flex-1">
-              Delete
+            <Button type="submit" variant="default" className="flex-1">
+              <Pencil className="size-4" strokeWidth={1.75} />
+              Rename
             </Button>
           </div>
-        </div>
-      ) : (
-        <Button
-          onClick={() => onDeleteConfirmChange(true)}
-          disabled={!folder.isEmpty}
-          title={folder.isEmpty ? `Delete ${folder.name}` : "Folder must be empty"}
-          className="mt-5 w-full justify-start px-4 py-3 text-left text-rose-400 hover:border-rose-900/50 hover:bg-rose-950/20"
-        >
-          <Trash2 className="size-5" strokeWidth={1.75} />
-          <span>{folder.isEmpty ? "Delete folder" : "Folder must be empty"}</span>
-        </Button>
-      )}
-    </Modal>
+        </form>
+
+        <Card variant="inset" padding="md" className="mt-5">
+          <Field className="gap-3">
+            <FieldLabel>Background image URL</FieldLabel>
+            <Input
+              value={folderBackgroundUrl}
+              onChange={(event) => onFolderBackgroundUrlChange(event.target.value)}
+              placeholder="https://cards.scryfall.io/..."
+            />
+          </Field>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button onClick={onSaveBackground} className="flex-1">
+              <Image className="size-4" strokeWidth={1.75} />
+              Save background
+            </Button>
+            {folder.background ? (
+              <Button onClick={onEditBackgroundCrop} className="flex-1">
+                <Image className="size-4" strokeWidth={1.75} />
+                Edit crop
+              </Button>
+            ) : null}
+            {folder.background ? (
+              <Button onClick={onClearBackground} className="flex-1">
+                <ImageOff className="size-4" strokeWidth={1.75} />
+                Clear
+              </Button>
+            ) : null}
+          </div>
+        </Card>
+
+        {showDeleteConfirm ? (
+          <Alert
+            role="alert"
+            size="panel"
+            aria-label={`Confirm delete ${folder.name}`}
+            className="mt-5 bg-destructive-surface/20 text-destructive-emphasis"
+          >
+            <AlertDescription>Delete this empty folder?</AlertDescription>
+            <AlertActions className="flex-nowrap">
+              <Button
+                ref={cancelDeleteRef}
+                onClick={() => onDeleteConfirmChange(false)}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={onDelete} className="flex-1">
+                Delete
+              </Button>
+            </AlertActions>
+          </Alert>
+        ) : (
+          <Button
+            ref={deleteFolderRef}
+            size="lg"
+            onClick={() => onDeleteConfirmChange(true)}
+            disabled={!folder.isEmpty}
+            title={folder.isEmpty ? `Delete ${folder.name}` : "Folder must be empty"}
+            className="mt-5 w-full justify-start text-left"
+          >
+            <Trash2 className="size-5" strokeWidth={1.75} />
+            <span>{folder.isEmpty ? "Delete folder" : "Folder must be empty"}</span>
+          </Button>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }

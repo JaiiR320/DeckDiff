@@ -1,5 +1,19 @@
 import { useEffect } from "react";
 
+// Typing targets and anything inside a modal or popup keep their own keys.
+const EXCLUDED_TARGET =
+  "input,textarea,select,[role=textbox],[role=dialog],[role=alertdialog],[role=menu],[role=listbox],[inert]";
+// Open modal dialogs, menus and listboxes block page shortcuts even when focus is elsewhere.
+// Base UI keeps a closed Select list mounted inside a [hidden] wrapper, so hidden layers don't count.
+const OPEN_BLOCKING_LAYER = [
+  "[data-slot=dialog-content]",
+  "[data-slot=alert-dialog-content]",
+  "[role=menu]",
+  "[role=listbox]",
+]
+  .map((layer) => `${layer}:not([hidden],[hidden] *)`)
+  .join(",");
+
 export function useDeckEditorShortcuts(
   compareMode: boolean,
   undoEditorChange: () => void,
@@ -7,12 +21,14 @@ export function useDeckEditorShortcuts(
 ) {
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
-      const target = event.target as HTMLElement | null;
+      const target = event.target instanceof Element ? event.target : null;
       if (
         compareMode ||
-        target?.closest("input,textarea,select") ||
-        target?.isContentEditable ||
-        !(event.metaKey || event.ctrlKey)
+        event.defaultPrevented ||
+        !(event.metaKey || event.ctrlKey) ||
+        target?.closest(EXCLUDED_TARGET) ||
+        (target instanceof HTMLElement && target.isContentEditable) ||
+        document.querySelector(OPEN_BLOCKING_LAYER)
       ) {
         return;
       }

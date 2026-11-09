@@ -33,7 +33,7 @@ export const Route = createRootRoute({
       <head>
         <HeadContent />
       </head>
-      <body className="flex min-h-dvh flex-col bg-zinc-950 font-sans antialiased text-zinc-100 wrap-anywhere">
+      <body className="flex min-h-dvh flex-col wrap-anywhere">
         <AppHeader />
         <div className="flex-1">{children}</div>
         <FeedbackGate />

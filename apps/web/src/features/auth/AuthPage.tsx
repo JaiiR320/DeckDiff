@@ -1,9 +1,12 @@
-import { LoaderCircle } from "lucide-react";
+import { Alert } from "@jaiir320/design-system/components/alert";
+import { Button } from "@jaiir320/design-system/components/button";
+import { Card } from "@jaiir320/design-system/components/card";
+import { Field, FieldLabel } from "@jaiir320/design-system/components/field";
+import { Input } from "@jaiir320/design-system/components/input";
+import { Spinner } from "@jaiir320/design-system/components/spinner";
+import { ToggleGroup, ToggleGroupItem } from "@jaiir320/design-system/components/toggle-group";
 import { useReducer } from "react";
 import type { FormEvent } from "react";
-import { Alert } from "#/components/ui/Alert";
-import { Button } from "#/components/ui/Button";
-import { Input } from "#/components/ui/Input";
 import { authClient } from "#/lib/auth-client";
 
 type Mode = "sign-in" | "sign-up";
@@ -86,76 +89,66 @@ export function AuthPage() {
 
   return (
     <main className="flex h-full items-center justify-center px-6 py-12">
-      <div className="w-full max-w-md rounded-3xl border border-zinc-800 bg-zinc-950/90 p-8 shadow-2xl shadow-black/40">
+      <Card
+        variant="glass"
+        padding="xl"
+        className="w-full max-w-md rounded-3xl bg-surface-glass/90 shadow-2xl shadow-black/40"
+      >
         <div className="space-y-2 text-center">
-          <p className="text-sm font-medium uppercase tracking-[0.3em] text-cyan-300">DeckDiff</p>
-          <h1 className="text-3xl font-semibold text-zinc-100">{title}</h1>
-          <p className="text-sm text-zinc-400">{subtitle}</p>
+          <p className="text-sm font-medium uppercase tracking-brand text-highlight">DeckDiff</p>
+          <h1 className="text-3xl font-semibold text-foreground">{title}</h1>
+          <p className="text-sm text-subtle-foreground">{subtitle}</p>
         </div>
 
-        <div className="mt-6 grid grid-cols-2 gap-2 rounded-2xl border border-zinc-800 bg-zinc-900 p-1">
-          <button
-            type="button"
-            onClick={() => setState({ mode: "sign-in" })}
-            className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
-              mode === "sign-in" ? "bg-cyan-400 text-cyan-950" : "text-zinc-400 hover:text-zinc-200"
-            }`}
-          >
-            Sign in
-          </button>
-          <button
-            type="button"
-            onClick={() => setState({ mode: "sign-up" })}
-            className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
-              mode === "sign-up" ? "bg-cyan-400 text-cyan-950" : "text-zinc-400 hover:text-zinc-200"
-            }`}
-          >
-            Sign up
-          </button>
-        </div>
+        <ToggleGroup<Mode>
+          aria-label="Authentication mode"
+          variant="segmented"
+          value={[mode]}
+          onValueChange={(value) => {
+            if (value[0]) setState({ mode: value[0] });
+          }}
+          className="mt-6"
+        >
+          <ToggleGroupItem<Mode> value="sign-in">Sign in</ToggleGroupItem>
+          <ToggleGroupItem<Mode> value="sign-up">Sign up</ToggleGroupItem>
+        </ToggleGroup>
 
         <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
-          <div>
-            <label className="block text-sm font-medium text-zinc-400" htmlFor="auth-email">
-              Email
-            </label>
+          <Field>
+            <FieldLabel>Email</FieldLabel>
             <Input
               id="auth-email"
               type="email"
               autoComplete="email"
               value={email}
-              onChange={(event) => setState({ email: event.target.value })}
-              className="mt-2 w-full"
+              onValueChange={(value) => setState({ email: value })}
               placeholder="you@example.com"
               required
             />
-          </div>
+          </Field>
 
-          <div>
-            <label className="block text-sm font-medium text-zinc-400" htmlFor="auth-password">
-              Password
-            </label>
+          <Field>
+            <FieldLabel>Password</FieldLabel>
             <Input
               id="auth-password"
               type="password"
               autoComplete={mode === "sign-in" ? "current-password" : "new-password"}
               value={password}
-              onChange={(event) => setState({ password: event.target.value })}
-              className="mt-2 w-full"
+              onValueChange={(value) => setState({ password: value })}
               placeholder="At least 8 characters"
               required
               minLength={8}
             />
-          </div>
+          </Field>
 
-          {errorMessage ? <Alert className="border-rose-900/40">{errorMessage}</Alert> : null}
+          {errorMessage ? <Alert role="alert">{errorMessage}</Alert> : null}
 
-          <Button type="submit" variant="primary" disabled={isSubmitting} className="w-full py-3">
-            {isSubmitting ? <LoaderCircle className="size-4 animate-spin" /> : null}
+          <Button type="submit" variant="default" disabled={isSubmitting} className="w-full py-3">
+            {isSubmitting ? <Spinner /> : null}
             {mode === "sign-in" ? "Sign in" : "Create account"}
           </Button>
         </form>
-      </div>
+      </Card>
     </main>
   );
 }

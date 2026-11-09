@@ -1,7 +1,15 @@
-import type { FormEvent } from "react";
-import { Button } from "#/components/ui/Button";
-import { Input } from "#/components/ui/Input";
-import { Modal } from "#/components/ui/Modal";
+import { useRef, type FormEvent } from "react";
+import { Button } from "@jaiir320/design-system/components/button";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogTitle,
+} from "@jaiir320/design-system/components/dialog";
+import { Field, FieldLabel } from "@jaiir320/design-system/components/field";
+import { Input } from "@jaiir320/design-system/components/input";
 
 type SaveDeckModalProps = {
   defaultLabel: string;
@@ -11,7 +19,7 @@ type SaveDeckModalProps = {
 };
 
 export function SaveDeckModal({ defaultLabel, isOpen, onClose, onSave }: SaveDeckModalProps) {
-  if (!isOpen) return null;
+  const inputRef = useRef<HTMLInputElement>(null);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -21,34 +29,34 @@ export function SaveDeckModal({ defaultLabel, isOpen, onClose, onSave }: SaveDec
     onSave(trimmed || defaultLabel);
   }
 
-  function handleClose() {
-    onClose();
-  }
-
   return (
-    <Modal ariaLabel="Close save deck modal" onClose={handleClose}>
-      <h2 className="text-xl font-semibold text-zinc-100">Save Deck</h2>
-      <p className="mt-2 text-sm text-zinc-400">Create a snapshot of your current deck state.</p>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent initialFocus={inputRef}>
+        <DialogTitle>Save Deck</DialogTitle>
+        <DialogDescription className="mt-2 text-subtle-foreground">
+          Create a snapshot of your current deck state.
+        </DialogDescription>
 
-      <form className="mt-5" onSubmit={handleSubmit}>
-        <label className="block text-sm font-medium text-zinc-400" htmlFor="save-label">
-          Save label (optional)
-        </label>
-        <Input
-          id="save-label"
-          name="label"
-          defaultValue={defaultLabel}
-          placeholder={defaultLabel}
-          className="mt-2 w-full"
-        />
+        <form className="mt-5" onSubmit={handleSubmit}>
+          <Field>
+            <FieldLabel>Save label (optional)</FieldLabel>
+            <Input
+              ref={inputRef}
+              id="save-label"
+              name="label"
+              defaultValue={defaultLabel}
+              placeholder={defaultLabel}
+            />
+          </Field>
 
-        <div className="mt-5 flex justify-end gap-3">
-          <Button onClick={handleClose}>Cancel</Button>
-          <Button type="submit" variant="primary">
-            Save
-          </Button>
-        </div>
-      </form>
-    </Modal>
+          <DialogFooter>
+            <DialogClose render={<Button />}>Cancel</DialogClose>
+            <Button type="submit" variant="default">
+              Save
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

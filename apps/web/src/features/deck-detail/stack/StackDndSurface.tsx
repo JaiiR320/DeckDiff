@@ -6,11 +6,17 @@ import {
   type DragOverEvent,
   useDragOperation,
 } from "@dnd-kit/react";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@jaiir320/design-system/components/context-menu";
+import { Empty } from "@jaiir320/design-system/components/empty";
+import { Toggle } from "@jaiir320/design-system/components/toggle";
 import { Minus, Plus } from "lucide-react";
 import { Fragment, useRef, useState } from "react";
-import type { CSSProperties, MouseEvent, ReactNode } from "react";
-import { ContextMenu, ContextMenuItem } from "#/components/ui/ContextMenu";
-import { IconButton } from "#/components/ui/IconButton";
+import type { ComponentProps, CSSProperties, ReactNode } from "react";
 import type { DeckStackLayout, DeckTileCover } from "#/lib/deck";
 import { createCategoryId, type CardCategory, type DeckCategory } from "#/lib/decklist";
 import type { SearchCardResult } from "#/lib/scryfall";
@@ -25,6 +31,12 @@ import {
   moveLayoutByPointer,
   type DropPreview,
 } from "./stackLayoutDrag";
+
+type LaneTriggerProps = ComponentProps<typeof ContextMenuTrigger>;
+type LaneContextMenuEvent = Parameters<NonNullable<LaneTriggerProps["onContextMenu"]>>[0];
+type LaneKeyboardEvent = Parameters<NonNullable<LaneTriggerProps["onKeyDown"]>>[0];
+type LaneMenuAnchor = { getBoundingClientRect: () => DOMRect };
+type LaneMenuState = { laneIndex: number; anchor: LaneMenuAnchor | null };
 
 type EditorDeckStackProps = {
   categories: DeckCategory[];
@@ -80,7 +92,8 @@ type StackLaneGridActions = Pick<
   | "onCategoryChange"
   | "onRenameCategory"
 > & {
-  openLaneMenu: (event: MouseEvent<HTMLDivElement>) => void;
+  openLaneMenu: (event: LaneContextMenuEvent) => void;
+  openLaneMenuFromKeyboard: (event: LaneKeyboardEvent) => void;
 };
 
 export function EditorDeckStack({
@@ -115,9 +128,10 @@ export function EditorDeckStack({
   categoryElements.current ??= new Map<CardCategory, HTMLElement>();
   const [dropPreview, setDropPreview] = useState<DropPreview | null>(null);
   const dropPreviewRef = useRef<DropPreview | null>(null);
-  const [laneMenu, setLaneMenu] = useState<{ x: number; y: number; laneIndex: number } | null>(
-    null,
-  );
+  const [laneMenu, setLaneMenu] = useState<LaneMenuState | null>(null);
+  // Survive the close so focus can return to the lane the menu acted on.
+  const laneMenuIndexRef = useRef(0);
+  const skipLaneMenuFocusRef = useRef(false);
   const [renamingCategoryId, setRenamingCategoryId] = useState<CardCategory | null>(null);
   const visibleCategoryIds = new Set<CardCategory>();
   const includedCategoryIds = new Set<CardCategory>();
@@ -193,6 +207,7 @@ export function EditorDeckStack({
     onCategoryChange,
     onRenameCategory,
     openLaneMenu,
+    openLaneMenuFromKeyboard,
   };
 
   function handleDragStart() {
@@ -200,40 +215,50 @@ export function EditorDeckStack({
     setLaneMenu(null);
   }
 
-  function openLaneMenu(event: MouseEvent<HTMLDivElement>) {
+  function showLaneMenu(menu: LaneMenuState) {
+    laneMenuIndexRef.current = menu.laneIndex;
+    skipLaneMenuFocusRef.current = false;
+    setLaneMenu(menu);
+  }
+
+  function openLaneMenu(event: LaneContextMenuEvent) {
     const target = event.target as HTMLElement;
     if (
       readOnly ||
       generatedView ||
-      target.closest("[data-category-stack],button,input,textarea,select")
+      target.closest(
+        "[data-category-stack],button,input,textarea,select,[role=button],[role=combobox]",
+      )
     ) {
+      // Leave the native menu alone and keep Base UI from opening the lane menu.
+      event.preventBaseUIHandler();
+      event.stopPropagation();
+      return;
+    }
+
+    // Base UI anchors the menu at the pointer.
+    showLaneMenu({
+      laneIndex: getPointerLaneIndex(laneElements.current, event.clientX),
+      anchor: null,
+    });
+  }
+
+  function openLaneMenuFromKeyboard(event: LaneKeyboardEvent) {
+    const isMenuKey = event.key === "ContextMenu" || (event.shiftKey && event.key === "F10");
+    const lane = event.target as HTMLElement;
+    if (!isMenuKey || readOnly || generatedView || !lane.matches("[data-stack-lane]")) {
       return;
     }
 
     event.preventDefault();
-    const laneIndex = getPointerLaneIndex(event.clientX);
-    setLaneMenu({ x: event.clientX, y: event.clientY, laneIndex });
-  }
-
-  function getPointerLaneIndex(pointerX: number) {
-    let nearestLaneIndex = 0;
-    let nearestLaneDistance = Number.POSITIVE_INFINITY;
-
-    for (const [laneIndex, element] of laneElements.current) {
-      const rect = element.getBoundingClientRect();
-
-      if (pointerX >= rect.left && pointerX <= rect.right) {
-        return laneIndex;
-      }
-
-      const distance = Math.abs(pointerX - (rect.left + rect.width / 2));
-      if (distance < nearestLaneDistance) {
-        nearestLaneDistance = distance;
-        nearestLaneIndex = laneIndex;
-      }
-    }
-
-    return nearestLaneIndex;
+    const rect = lane.getBoundingClientRect();
+    showLaneMenu({
+      laneIndex: Number(lane.dataset.laneIndex),
+      anchor: {
+        getBoundingClientRect: () =>
+          DOMRect.fromRect({ x: rect.left + 8, y: rect.top + 8, width: 0, height: 0 }),
+      },
+    });
   }
 
   function createCategoryInLane(laneIndex: number) {
@@ -245,6 +270,8 @@ export function EditorDeckStack({
 
     onCreateCategoryInLane?.(laneIndex, category);
     setRenamingCategoryId(category.id);
+    // The new category's rename popover takes focus; don't pull it back to the lane.
+    skipLaneMenuFocusRef.current = true;
     setLaneMenu(null);
   }
 
@@ -325,15 +352,6 @@ export function EditorDeckStack({
       >
         {searchToolbar}
         <SearchCardDragOverlayHost />
-        {generatedView ? null : (
-          <LaneMenu
-            laneMenu={laneMenu}
-            onOpenChange={(open) => {
-              if (!open) setLaneMenu(null);
-            }}
-            onCreateCategory={createCategoryInLane}
-          />
-        )}
         <div className="space-y-4 px-5 pb-5 pt-5">
           <StackSummary
             resultCardTotal={resultCardTotal}
@@ -345,16 +363,57 @@ export function EditorDeckStack({
             visibleRowsCount={visibleRows.length}
             onToggleShowDiffOnly={onToggleShowDiffOnly}
           />
-          <StackLaneGrid
-            data={laneGridData}
-            refs={laneGridRefs}
-            actions={laneGridActions}
-            readOnly={readOnly}
-          />
+          <ContextMenu
+            open={laneMenu !== null}
+            onOpenChange={(open) => {
+              if (!open) setLaneMenu(null);
+            }}
+            disabled={readOnly || generatedView}
+          >
+            <StackLaneGrid
+              data={laneGridData}
+              refs={laneGridRefs}
+              actions={laneGridActions}
+              readOnly={readOnly}
+            />
+            {generatedView ? null : (
+              <LaneMenu
+                laneMenu={laneMenu}
+                getFinalFocus={() =>
+                  skipLaneMenuFocusRef.current
+                    ? false
+                    : (laneElements.current.get(laneMenuIndexRef.current) ?? true)
+                }
+                onCreateCategory={createCategoryInLane}
+              />
+            )}
+          </ContextMenu>
         </div>
       </DragDropProvider>
     </div>
   );
+}
+
+// Grid-gap clicks belong to the nearest lane.
+function getPointerLaneIndex(laneElements: Map<number, HTMLDivElement>, pointerX: number) {
+  let nearestLaneIndex = 0;
+  let nearestLaneDistance = Number.POSITIVE_INFINITY;
+
+  for (const [laneIndex, element] of laneElements) {
+    const rect = element.getBoundingClientRect();
+
+    if (pointerX >= rect.left && pointerX <= rect.right) {
+      return laneIndex;
+    }
+
+    const distance = Math.abs(pointerX - (rect.left + rect.width / 2));
+    if (distance < nearestLaneDistance) {
+      nearestLaneDistance = distance;
+      nearestLaneIndex = laneIndex;
+    }
+  }
+
+  return nearestLaneIndex;
 }
 
 function StackLaneGrid({
@@ -382,19 +441,26 @@ function StackLaneGrid({
   const { categoryElements, laneElements } = refs;
 
   return (
-    <div
-      className="grid select-none items-start gap-0 pb-2"
-      onContextMenu={actions.openLaneMenu}
-      style={
-        {
-          gridTemplateColumns: `repeat(${Math.max(visibleLanes.length, 1)}, minmax(0, 1fr))`,
-        } as CSSProperties
+    <ContextMenuTrigger
+      render={
+        <div
+          className="grid select-none items-start gap-0 pb-2"
+          style={
+            {
+              gridTemplateColumns: `repeat(${Math.max(visibleLanes.length, 1)}, minmax(0, 1fr))`,
+            } as CSSProperties
+          }
+        />
       }
+      onContextMenu={actions.openLaneMenu}
+      onKeyDown={actions.openLaneMenuFromKeyboard}
+      // Long press would compete with the dnd touch sensors.
+      onTouchStart={(event) => event.preventBaseUIHandler()}
     >
       {visibleLanes.length === 0 ? (
-        <div className="rounded-xl border border-zinc-800 bg-zinc-950/80 px-5 py-12 text-center text-sm font-semibold text-zinc-500">
+        <Empty variant="outline" className="px-5 py-12 font-semibold text-muted-foreground">
           All categories are hidden. Re-enable one from Settings.
-        </div>
+        </Empty>
       ) : null}
       {visibleLanes.map(({ lane, laneIndex }) => (
         <CategoryLane
@@ -402,6 +468,7 @@ function StackLaneGrid({
           laneIndex={laneIndex}
           categories={lane}
           hasPreview={dropPreview?.laneIndex === laneIndex}
+          focusable={!readOnly && !generatedView}
           onLaneRef={(element) => {
             if (element) {
               laneElements.current.set(laneIndex, element);
@@ -458,30 +525,30 @@ function StackLaneGrid({
           ) : null}
         </CategoryLane>
       ))}
-    </div>
+    </ContextMenuTrigger>
   );
 }
 
 function LaneMenu({
   laneMenu,
-  onOpenChange,
+  getFinalFocus,
   onCreateCategory,
 }: {
-  laneMenu: { x: number; y: number; laneIndex: number } | null;
-  onOpenChange: (open: boolean) => void;
+  laneMenu: LaneMenuState | null;
+  getFinalFocus: () => HTMLElement | boolean;
   onCreateCategory: (laneIndex: number) => void;
 }) {
   return (
-    <ContextMenu
-      open={Boolean(laneMenu)}
-      onOpenChange={onOpenChange}
-      position={laneMenu}
-      widthClassName="w-44"
+    <ContextMenuContent
+      className="w-44"
+      finalFocus={getFinalFocus}
+      // Keyboard opening anchors at the focused lane; pointer opening uses Base UI's pointer anchor.
+      positionerProps={laneMenu?.anchor ? { anchor: laneMenu.anchor } : undefined}
     >
-      <ContextMenuItem onSelect={() => laneMenu && onCreateCategory(laneMenu.laneIndex)}>
+      <ContextMenuItem onClick={() => laneMenu && onCreateCategory(laneMenu.laneIndex)}>
         New category
       </ContextMenuItem>
-    </ContextMenu>
+    </ContextMenuContent>
   );
 }
 
@@ -508,30 +575,30 @@ function StackSummary({
 
   return (
     <div className="flex items-center justify-between gap-4">
-      <p className="font-mono text-sm font-medium uppercase tracking-[0.08em] text-zinc-500">
+      <p className="font-mono text-sm font-medium uppercase tracking-label text-muted-foreground">
         {shownCount} {showDiffOnly ? "diff card" : "total card"}
         {shownCount === 1 ? "" : "s"}
         <span className="mx-2">|</span>
         <span>{formatPrice(totalDeckPrice)}</span>
       </p>
       <div className="flex items-center gap-4">
-        <div className="flex items-center gap-3 font-mono text-sm font-medium uppercase tracking-[0.08em]">
-          <span className="text-emerald-300">+{totalAdded}</span>
-          <span className="text-amber-300">~{totalChanged}</span>
-          <span className="text-rose-300">-{totalRemoved}</span>
+        <div className="flex items-center gap-3 font-mono text-sm font-medium uppercase tracking-label">
+          <span className="text-success-text">+{totalAdded}</span>
+          <span className="text-warning-text">~{totalChanged}</span>
+          <span className="text-destructive-muted-foreground">-{totalRemoved}</span>
         </div>
-        <IconButton
-          onClick={onToggleShowDiffOnly}
-          aria-pressed={showDiffOnly}
+        <Toggle
+          pressed={showDiffOnly}
+          onPressedChange={onToggleShowDiffOnly}
           aria-label={showDiffOnly ? "Show all cards" : "Show differences only"}
           title={showDiffOnly ? "Show all cards" : "Show differences only"}
-          variant={showDiffOnly ? "active" : "secondary"}
-          size="sm"
-          className="relative rounded-md bg-zinc-900 hover:bg-zinc-800"
+          variant="accent"
+          // Measured old result: the surface fill wins in both states; off-state hover keeps it and lifts the border, off-state radius is xl.
+          className="relative not-data-pressed:rounded-xl not-data-pressed:hover:border-border-strong not-data-pressed:hover:bg-surface data-pressed:bg-surface data-pressed:hover:bg-secondary"
         >
           <Minus className="size-3.5 translate-y-[2px]" strokeWidth={2} />
           <Plus className="absolute size-3.5 -translate-y-[2px]" strokeWidth={2} />
-        </IconButton>
+        </Toggle>
       </div>
     </div>
   );
@@ -549,7 +616,7 @@ function SearchCardDragOverlayHost() {
   }
 
   return (
-    <DragOverlay dropAnimation={null}>
+    <DragOverlay dropAnimation={null} style={{ zIndex: "var(--z-drag)" }}>
       <SearchCardDragOverlay card={source.data.card as SearchCardResult} />
     </DragOverlay>
   );
@@ -559,19 +626,19 @@ function SearchCardDragOverlay({ card }: { card: SearchCardResult }) {
   const imageUrl = card.imageUrl ?? card.smallImageUrl;
 
   return (
-    <div className="pointer-events-none w-64 rotate-1 overflow-hidden rounded-xl bg-zinc-900 shadow-2xl shadow-cyan-950/50 ring-2 ring-cyan-200">
+    <div className="pointer-events-none w-64 rotate-1 overflow-hidden rounded-xl bg-surface shadow-drag ring-2 ring-highlight-strong">
       <div className="relative aspect-[488/680]">
         {imageUrl ? (
           <img src={imageUrl} alt={card.name} className="h-full w-full object-cover" />
         ) : (
-          <div className="flex h-full items-start justify-center bg-zinc-900 px-3 pt-8 text-center text-sm font-semibold text-zinc-400">
+          <div className="flex h-full items-start justify-center bg-surface px-3 pt-8 text-center text-sm font-semibold text-subtle-foreground">
             {card.name}
           </div>
         )}
-        <div className="absolute left-0 top-0 rounded-br-lg bg-zinc-950/75 px-2 py-1 font-mono text-sm font-semibold text-zinc-100 shadow-lg shadow-black/30">
+        <div className="absolute left-0 top-0 rounded-br-lg bg-surface-glass/75 px-2 py-1 font-mono text-sm font-semibold text-on-image-foreground shadow-lg shadow-black/30">
           1
         </div>
-        <div className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/45 to-transparent opacity-80" />
+        <div className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-on-image/45 to-transparent opacity-80" />
       </div>
     </div>
   );

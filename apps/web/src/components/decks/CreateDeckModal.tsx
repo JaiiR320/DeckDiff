@@ -1,7 +1,14 @@
 import type { FormEvent } from "react";
-import { Button } from "#/components/ui/Button";
-import { Input } from "#/components/ui/Input";
-import { Modal } from "#/components/ui/Modal";
+import { Button } from "@jaiir320/design-system/components/button";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogFooter,
+  DialogTitle,
+} from "@jaiir320/design-system/components/dialog";
+import { Field, FieldLabel } from "@jaiir320/design-system/components/field";
+import { Input } from "@jaiir320/design-system/components/input";
 
 type CreateDeckModalProps = {
   deckName: string;
@@ -23,26 +30,26 @@ export function CreateDeckModal({
   onSubmit,
 }: CreateDeckModalProps) {
   return (
-    <Modal ariaLabel="Close create deck modal" onClose={onClose}>
-      <h1 className="text-xl font-semibold text-zinc-100">{title}</h1>
-      <form className="mt-5" onSubmit={onSubmit}>
-        <label className="block text-sm font-medium text-zinc-400" htmlFor="deck-name">
-          {label}
-        </label>
-        <Input
-          id="deck-name"
-          value={deckName}
-          onChange={(event) => onDeckNameChange(event.target.value)}
-          placeholder={placeholder}
-          className="mt-2 w-full"
-        />
-        <div className="mt-5 flex justify-end gap-3">
-          <Button onClick={onClose}>Cancel</Button>
-          <Button type="submit" variant="primary">
-            Create
-          </Button>
-        </div>
-      </form>
-    </Modal>
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent>
+        <DialogTitle>{title}</DialogTitle>
+        <form className="mt-5" onSubmit={onSubmit}>
+          <Field>
+            <FieldLabel>{label}</FieldLabel>
+            <Input
+              value={deckName}
+              onChange={(event) => onDeckNameChange(event.target.value)}
+              placeholder={placeholder}
+            />
+          </Field>
+          <DialogFooter>
+            <DialogClose render={<Button />}>Cancel</DialogClose>
+            <Button type="submit" variant="default">
+              Create
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

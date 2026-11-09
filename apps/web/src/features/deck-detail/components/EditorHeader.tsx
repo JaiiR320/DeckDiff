@@ -1,10 +1,23 @@
 import { useDragDropMonitor } from "@dnd-kit/react";
 import { ArrowDown, ArrowUp, Download, Import, Redo2, Undo2 } from "lucide-react";
-import { useEffect, useReducer, useRef, useState } from "react";
-import { Button } from "#/components/ui/Button";
-import { DropdownSelect } from "#/components/ui/DropdownSelect";
-import { IconButton } from "#/components/ui/IconButton";
-import { Input } from "#/components/ui/Input";
+import { type ReactNode, useEffect, useId, useReducer, useRef, useState } from "react";
+import { Button } from "@jaiir320/design-system/components/button";
+import { Input } from "@jaiir320/design-system/components/input";
+import { Popover, PopoverContent } from "@jaiir320/design-system/components/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@jaiir320/design-system/components/select";
+import { Separator } from "@jaiir320/design-system/components/separator";
+import { focusRing } from "@jaiir320/design-system/lib/recipes";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@jaiir320/design-system/components/tooltip";
 import type { DeckCardSort, DeckCardSortDirection } from "#/lib/deck";
 import { searchCards, type SearchCardResult } from "#/lib/scryfall";
 import type { EditorRow } from "../editor/types";
@@ -80,7 +93,164 @@ export function EditorHeader({
   onReverseCardSortDirection,
   onPreviewCard,
 }: EditorHeaderProps) {
+  return (
+    <div className="border-b border-border p-5">
+      <div className="flex items-center gap-3">
+        <CardSearch onPreviewCard={onPreviewCard} />
+
+        <Separator orientation="vertical" className="mx-1 h-10" />
+        <div className="flex shrink-0 items-center gap-2">
+          <Select
+            items={CARD_GROUP_VIEW_OPTIONS}
+            value={cardGroupView}
+            onValueChange={(value) => {
+              if (value !== null) {
+                onCardGroupViewChange(value);
+              }
+            }}
+          >
+            <SelectTrigger aria-label="Group cards" className="w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {CARD_GROUP_VIEW_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Separator orientation="vertical" className="mx-1 h-10" />
+          <Select
+            items={CARD_SORT_OPTIONS}
+            value={cardSort}
+            onValueChange={(value) => {
+              if (value !== null) {
+                onCardSortChange(value);
+              }
+            }}
+          >
+            <SelectTrigger aria-label="Sort cards" className="w-44">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {CARD_SORT_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  size="icon"
+                  onClick={onReverseCardSortDirection}
+                  aria-label="Reverse card sort direction"
+                />
+              }
+            >
+              {cardSortDirection === "asc" ? (
+                <ArrowUp className="size-4" strokeWidth={1.75} />
+              ) : (
+                <ArrowDown className="size-4" strokeWidth={1.75} />
+              )}
+            </TooltipTrigger>
+            <TooltipContent>
+              {`Reverse to ${cardSortDirection === "asc" ? "descending" : "ascending"}`}
+            </TooltipContent>
+          </Tooltip>
+          <Separator orientation="vertical" className="mx-1 h-10" />
+          <HistoryButton
+            label="Undo"
+            disabledReason="Nothing to undo"
+            onClick={onUndo}
+            disabled={!canUndo}
+          >
+            <Undo2 className="size-4" strokeWidth={1.75} />
+          </HistoryButton>
+          <HistoryButton
+            label="Redo"
+            disabledReason="Nothing to redo"
+            onClick={onRedo}
+            disabled={!canRedo}
+          >
+            <Redo2 className="size-4" strokeWidth={1.75} />
+          </HistoryButton>
+          <Separator orientation="vertical" className="mx-1 h-10" />
+          <Button onClick={onExport} disabled={exportDisabled} size="sm">
+            <Download className="size-4" strokeWidth={1.75} />
+            Export
+          </Button>
+          <Button onClick={onImport} size="sm">
+            <Import className="size-4" strokeWidth={1.75} />
+            Import
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// A disabled button is pointer-inert and can't open a tooltip, so a focusable group carries
+// the name and describes itself with persistent sr-only text (design-system DisabledReason).
+function HistoryButton({
+  label,
+  disabledReason,
+  onClick,
+  disabled,
+  children,
+}: {
+  label: string;
+  disabledReason: string;
+  onClick: () => void;
+  disabled: boolean;
+  children: ReactNode;
+}) {
+  const reasonId = useId();
+
+  if (!disabled) {
+    return (
+      <Tooltip>
+        <TooltipTrigger render={<Button size="icon" onClick={onClick} aria-label={label} />}>
+          {children}
+        </TooltipTrigger>
+        <TooltipContent>{label}</TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  return (
+    <>
+      <Tooltip>
+        <TooltipTrigger
+          render={<span />}
+          tabIndex={0}
+          role="group"
+          aria-label={label}
+          aria-describedby={reasonId}
+          className={`inline-flex rounded-lg ${focusRing}`}
+        >
+          <Button size="icon" disabled aria-label={label}>
+            {children}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>{disabledReason}</TooltipContent>
+      </Tooltip>
+      <span id={reasonId} className="sr-only">
+        {disabledReason}
+      </span>
+    </>
+  );
+}
+
+function CardSearch({ onPreviewCard }: Pick<EditorHeaderProps, "onPreviewCard">) {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const popupRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  // Escape from a result moves focus back to the input; that focus must not reopen the results.
+  const skipFocusReopenRef = useRef(false);
   const inactivityTimeoutRef = useRef<number | null>(null);
   const [query, setQuery] = useState("");
   const [isDraggingSearchCard, setIsDraggingSearchCard] = useState(false);
@@ -101,6 +271,12 @@ export function EditorHeader({
     clearInactivityTimer();
 
     inactivityTimeoutRef.current = window.setTimeout(() => {
+      const active = document.activeElement;
+      // Idle close is suspended while the user is in the input or the results.
+      if (containerRef.current?.contains(active) || popupRef.current?.contains(active)) {
+        resetInactivityTimer();
+        return;
+      }
       dispatchSearch({ type: "close" });
     }, SEARCH_RESULTS_IDLE_CLOSE_MS);
   }
@@ -136,20 +312,7 @@ export function EditorHeader({
   useEffect(() => {
     if (!isResultsOpen) {
       clearInactivityTimer();
-      return;
     }
-
-    function handlePointerDown(event: PointerEvent) {
-      if (!containerRef.current?.contains(event.target as Node)) {
-        dispatchSearch({ type: "close" });
-      }
-    }
-
-    document.addEventListener("pointerdown", handlePointerDown);
-
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDown);
-    };
   }, [isResultsOpen]);
 
   useEffect(() => {
@@ -177,114 +340,102 @@ export function EditorHeader({
     },
   });
 
+  const isPopoverOpen = query.trim().length >= 3 && isResultsOpen;
   return (
-    <div className="border-b border-zinc-800 p-5">
-      <div className="flex items-center gap-3">
-        <div
-          ref={containerRef}
-          className="relative min-w-0 flex-1"
+    <>
+      <div
+        ref={containerRef}
+        className="relative min-w-0 flex-1"
+        onMouseEnter={resetInactivityTimer}
+        onMouseMove={resetInactivityTimer}
+      >
+        <Input
+          ref={inputRef}
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          onKeyDown={(event) => {
+            // Focus stays in the input, so the popover never sees this Escape itself.
+            if (event.key === "Escape") {
+              dispatchSearch({ type: "close" });
+              clearInactivityTimer();
+            }
+          }}
+          onFocus={() => {
+            if (skipFocusReopenRef.current) {
+              skipFocusReopenRef.current = false;
+              return;
+            }
+            if (query.trim().length >= 3) {
+              dispatchSearch({ type: "open" });
+              resetInactivityTimer();
+            }
+          }}
+          aria-label="Add card"
+          autoComplete="off"
+          placeholder="Add card"
+          inputSize="sm"
+          className="py-2.5"
+        />
+      </div>
+
+      <Popover
+        open={isPopoverOpen}
+        onOpenChange={(open, details) => {
+          if (open) {
+            return;
+          }
+          // The source of an active search drag must stay mounted until the drop completes.
+          if (isDraggingSearchCard) {
+            return;
+          }
+          // Pressing the anchored input is not an outside press.
+          const target = details.event.target;
+          if (target instanceof Node && containerRef.current?.contains(target)) {
+            return;
+          }
+          skipFocusReopenRef.current = details.reason === "escape-key";
+          dispatchSearch({ type: "close" });
+        }}
+      >
+        <PopoverContent
+          ref={popupRef}
+          anchor={containerRef}
+          align="start"
+          initialFocus={false}
+          // Escape from a focused result returns to the input; pointer closes leave focus alone.
+          finalFocus={(closeType) => (closeType === "keyboard" ? inputRef.current : false)}
+          aria-label="Search results"
           onMouseEnter={resetInactivityTimer}
           onMouseMove={resetInactivityTimer}
+          className={`w-(--anchor-width) overflow-hidden p-0 shadow-black/40 ${isDraggingSearchCard ? "pointer-events-none opacity-0" : ""}`}
         >
-          <Input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Escape") {
-                dispatchSearch({ type: "close" });
-                clearInactivityTimer();
-              }
-            }}
-            onFocus={() => {
-              if (query.trim().length >= 3) {
-                dispatchSearch({ type: "open" });
-                resetInactivityTimer();
-              }
-            }}
-            placeholder="Add card"
-            inputSize="sm"
-            className="w-full py-2.5"
-          />
-
-          {query.trim().length >= 3 && isResultsOpen ? (
-            <div
-              className={`absolute left-0 right-0 top-[calc(100%+0.5rem)] z-[1000] overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950 shadow-2xl shadow-black/40 ${isDraggingSearchCard ? "pointer-events-none opacity-0" : "opacity-100"}`}
-            >
-              {isSearching ? (
-                <div className="px-4 py-3 text-sm text-zinc-500">Searching cards…</div>
-              ) : results.length > 0 ? (
-                <div className="flex gap-3 overflow-x-auto p-4">
-                  {results.map((card, index) => (
-                    <SearchResultCard
-                      key={`${card.oracleId}-${card.name}`}
-                      card={card}
-                      index={index}
-                      onPreview={() => {
-                        resetInactivityTimer();
-                        onPreviewCard(card);
-                      }}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="px-4 py-3 text-sm text-zinc-500">No cards found.</div>
-              )}
+          {isSearching ? (
+            <div role="status" className="px-4 py-3 text-sm text-muted-foreground">
+              Searching cards…
             </div>
-          ) : null}
-        </div>
-
-        <ToolbarDivider />
-        <div className="flex shrink-0 items-center gap-2">
-          <DropdownSelect
-            value={cardGroupView}
-            options={CARD_GROUP_VIEW_OPTIONS}
-            onChange={onCardGroupViewChange}
-            aria-label="Group cards"
-            className="w-40"
-          />
-          <ToolbarDivider />
-          <DropdownSelect
-            value={cardSort}
-            options={CARD_SORT_OPTIONS}
-            onChange={onCardSortChange}
-            aria-label="Sort cards"
-            className="w-44"
-          />
-          <IconButton
-            onClick={onReverseCardSortDirection}
-            title={`Reverse to ${cardSortDirection === "asc" ? "descending" : "ascending"}`}
-            aria-label="Reverse card sort direction"
-          >
-            {cardSortDirection === "asc" ? (
-              <ArrowUp className="size-4" strokeWidth={1.75} />
-            ) : (
-              <ArrowDown className="size-4" strokeWidth={1.75} />
-            )}
-          </IconButton>
-          <ToolbarDivider />
-          <IconButton onClick={onUndo} disabled={!canUndo} title="Undo" aria-label="Undo">
-            <Undo2 className="size-4" strokeWidth={1.75} />
-          </IconButton>
-          <IconButton onClick={onRedo} disabled={!canRedo} title="Redo" aria-label="Redo">
-            <Redo2 className="size-4" strokeWidth={1.75} />
-          </IconButton>
-          <ToolbarDivider />
-          <Button onClick={onExport} disabled={exportDisabled} size="sm">
-            <Download className="size-4" strokeWidth={1.75} />
-            Export
-          </Button>
-          <Button onClick={onImport} size="sm">
-            <Import className="size-4" strokeWidth={1.75} />
-            Import
-          </Button>
-        </div>
-      </div>
-    </div>
+          ) : results.length > 0 ? (
+            <section aria-label="Results" className="flex gap-3 overflow-x-auto p-4">
+              {results.map((card, index) => (
+                <SearchResultCard
+                  key={`${card.oracleId}-${card.name}`}
+                  card={card}
+                  index={index}
+                  onPreview={() => {
+                    resetInactivityTimer();
+                    onPreviewCard(card);
+                  }}
+                />
+              ))}
+            </section>
+          ) : (
+            <div role="status" className="px-4 py-3 text-sm text-muted-foreground">
+              No cards found.
+            </div>
+          )}
+        </PopoverContent>
+      </Popover>
+    </>
   );
-}
-
-function ToolbarDivider() {
-  return <div aria-hidden="true" className="mx-1 h-10 border-l border-zinc-800" />;
 }
 
 function SearchResultCard({

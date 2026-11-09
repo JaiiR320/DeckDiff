@@ -13,15 +13,31 @@ import {
   Shuffle,
   Trash2,
 } from "lucide-react";
+import { Alert, AlertActions, AlertDescription } from "@jaiir320/design-system/components/alert";
+import { Button } from "@jaiir320/design-system/components/button";
+import { Card } from "@jaiir320/design-system/components/card";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@jaiir320/design-system/components/collapsible";
+import {
+  Dialog,
+  DialogBody,
+  DialogClose,
+  DialogContent,
+  DialogTitle,
+} from "@jaiir320/design-system/components/dialog";
+import { Input } from "@jaiir320/design-system/components/input";
+import { Label } from "@jaiir320/design-system/components/label";
+import { SwitchChip } from "@jaiir320/design-system/components/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@jaiir320/design-system/components/tabs";
+import { ToggleGroup, ToggleGroupItem } from "@jaiir320/design-system/components/toggle-group";
+import { focusRing } from "@jaiir320/design-system/lib/recipes";
 import { ManaSymbolIcon } from "#/components/cards/ManaSymbolIcon";
 import type { Dispatch, FormEvent } from "react";
-import { useReducer, useState } from "react";
-import { Alert } from "#/components/ui/Alert";
-import { Button } from "#/components/ui/Button";
-import { Input } from "#/components/ui/Input";
-import { Modal } from "#/components/ui/Modal";
-import { TabButton } from "#/components/ui/TabButton";
-import { ToggleChip } from "#/components/ui/ToggleChip";
+import { useId, useReducer, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import type { DeckColor, DeckFolderOption, DeckItem } from "../../lib/deck";
 import {
   createCategoryId,
@@ -187,80 +203,76 @@ export function DeckActionsModal({
   }
 
   return (
-    <Modal
-      ariaLabel="Close deck actions modal"
-      className="items-center justify-center overflow-y-auto overscroll-contain p-6"
-      maxWidth="4xl"
-      onClose={handleClose}
-      panelClassName="flex h-[736px] !max-w-[800px] max-h-[85vh] flex-col p-6"
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) handleClose();
+      }}
     >
-      <h2 className="text-xl font-semibold text-zinc-100">{deck.name}</h2>
-      <div className="mt-5 flex border-b border-zinc-800">
-        <TabButton
-          active={activeTab === "general"}
-          onClick={() => setState({ activeTab: "general" })}
-          className="px-4 py-2"
+      <DialogContent size="settings" className="flex h-[736px] max-h-[85vh] flex-col">
+        <DialogTitle>{deck.name}</DialogTitle>
+        <Tabs
+          value={activeTab}
+          onValueChange={(value: ModalState["activeTab"]) => setState({ activeTab: value })}
+          className="flex min-h-0 flex-1 flex-col"
         >
-          General
-        </TabButton>
-        {categories && onCategoriesChange ? (
-          <TabButton
-            active={activeTab === "categories"}
-            onClick={() => setState({ activeTab: "categories" })}
-            className="px-4 py-2"
-          >
-            Categories
-          </TabButton>
-        ) : null}
-      </div>
+          <TabsList className="mt-5 border-b border-border">
+            <TabsTrigger value="general">General</TabsTrigger>
+            {categories && onCategoriesChange ? (
+              <TabsTrigger value="categories">Categories</TabsTrigger>
+            ) : null}
+          </TabsList>
 
-      <div className="min-h-0 flex-1 overflow-y-auto pr-1">
-        {activeTab === "general" ? (
-          <GeneralSettingsTab
-            deck={deck}
-            isEditing={isEditing}
-            newName={newName}
-            draftColors={draftColors}
-            showDeleteConfirm={showDeleteConfirm}
-            onClose={onClose}
-            onDelete={onDelete}
-            onExport={(deckToExport) => {
-              persistDraftColors();
-              onExport({ ...deckToExport, colors: draftColors });
-            }}
-            onMoveToFolder={onMoveToFolder}
-            folderOptions={folderOptions}
-            currentFolderId={currentFolderId}
-            onColorsChange={onColorsChange}
-            onDraftColorsChange={setDraftColors}
-            onClearCover={onClearCover}
-            onEditCoverCrop={onEditCoverCrop}
-            onSwapSplitCover={onSwapSplitCover}
-            onRenameSubmit={handleRenameSubmit}
-            setState={setState}
-          />
-        ) : categories && onCategoriesChange ? (
-          <CategoriesSettingsTab
-            cards={cards}
-            categories={categories}
-            categoryName={categoryName}
-            newCategoryName={newCategoryName}
-            renamingCategoryId={renamingCategoryId}
-            showRemovedCardGhosts={showRemovedCardGhosts}
-            onAddCategory={handleAddCategory}
-            onAddLane={onAddLane}
-            onCategoriesChange={onCategoriesChange}
-            onRenameCategory={handleRenameCategory}
-            onShowRemovedCardGhostsChange={onShowRemovedCardGhostsChange}
-            setState={setState}
-          />
-        ) : null}
-      </div>
+          <DialogBody className="flex-1 overflow-y-auto pr-1">
+            <TabsContent value="general">
+              <GeneralSettingsTab
+                deck={deck}
+                isEditing={isEditing}
+                newName={newName}
+                draftColors={draftColors}
+                showDeleteConfirm={showDeleteConfirm}
+                onClose={onClose}
+                onDelete={onDelete}
+                onExport={(deckToExport) => {
+                  persistDraftColors();
+                  onExport({ ...deckToExport, colors: draftColors });
+                }}
+                onMoveToFolder={onMoveToFolder}
+                folderOptions={folderOptions}
+                currentFolderId={currentFolderId}
+                onColorsChange={onColorsChange}
+                onDraftColorsChange={setDraftColors}
+                onClearCover={onClearCover}
+                onEditCoverCrop={onEditCoverCrop}
+                onSwapSplitCover={onSwapSplitCover}
+                onRenameSubmit={handleRenameSubmit}
+                setState={setState}
+              />
+            </TabsContent>
+            {categories && onCategoriesChange ? (
+              <TabsContent value="categories">
+                <CategoriesSettingsTab
+                  cards={cards}
+                  categories={categories}
+                  categoryName={categoryName}
+                  newCategoryName={newCategoryName}
+                  renamingCategoryId={renamingCategoryId}
+                  showRemovedCardGhosts={showRemovedCardGhosts}
+                  onAddCategory={handleAddCategory}
+                  onAddLane={onAddLane}
+                  onCategoriesChange={onCategoriesChange}
+                  onRenameCategory={handleRenameCategory}
+                  onShowRemovedCardGhostsChange={onShowRemovedCardGhostsChange}
+                  setState={setState}
+                />
+              </TabsContent>
+            ) : null}
+          </DialogBody>
+        </Tabs>
 
-      <Button onClick={handleClose} className="mt-5 w-full">
-        Close
-      </Button>
-    </Modal>
+        <DialogClose render={<Button className="mt-5 w-full" />}>Close</DialogClose>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -305,6 +317,9 @@ function GeneralSettingsTab({
 }) {
   const [collapsedFolderIds, setCollapsedFolderIds] = useState<Set<string>>(() => new Set());
   const [isMoveToFolderOpen, setIsMoveToFolderOpen] = useState(false);
+  const colorsTitleId = useId();
+  const deleteButtonRef = useRef<HTMLButtonElement>(null);
+  const cancelDeleteRef = useRef<HTMLButtonElement>(null);
   const folderHasChildren = new Set(
     folderOptions.flatMap((folder) => (folder.parentFolderId ? [folder.parentFolderId] : [])),
   );
@@ -315,7 +330,6 @@ function GeneralSettingsTab({
   const currentFolderName = currentFolderId
     ? (folderOptions.find((folder) => folder.id === currentFolderId)?.name ?? "Unknown folder")
     : "Root";
-  const moveToFolderPanelId = `move-to-folder-panel-${deck.id}`;
 
   function toggleFolderCollapsed(folderId: string) {
     setCollapsedFolderIds((current) => {
@@ -329,110 +343,102 @@ function GeneralSettingsTab({
     });
   }
 
+  // The confirm replaces its trigger, so move focus explicitly in both directions.
+  function setDeleteConfirm(showDeleteConfirm: boolean) {
+    flushSync(() => setState({ showDeleteConfirm }));
+    (showDeleteConfirm ? cancelDeleteRef : deleteButtonRef).current?.focus();
+  }
+
   return (
     <div className="mt-5 space-y-2">
       {isEditing ? (
         <form onSubmit={onRenameSubmit} className="space-y-3">
-          <label className="block text-sm font-medium text-zinc-400" htmlFor="deck-rename">
-            New name
-          </label>
+          <Label htmlFor="deck-rename">New name</Label>
           <Input
             id="deck-rename"
             value={newName}
             onChange={(event) => setState({ newName: event.target.value })}
             placeholder="Enter a new name"
-            className="w-full"
           />
           <div className="flex gap-2">
             <Button onClick={() => setState({ isEditing: false })} className="flex-1">
               Cancel
             </Button>
-            <Button type="submit" variant="primary" className="flex-1">
+            <Button type="submit" variant="default" className="flex-1">
               Save
             </Button>
           </div>
         </form>
       ) : (
         <Button
-          type="button"
+          size="lg"
           onClick={() => setState({ newName: deck.name, isEditing: true })}
-          className="w-full justify-start px-4 py-3 text-left"
+          className="w-full justify-start text-left"
         >
-          <Pencil className="size-5 text-zinc-500" strokeWidth={1.75} />
+          <Pencil className="size-5 text-muted-foreground" strokeWidth={1.75} />
           <span>Rename deck</span>
         </Button>
       )}
 
       {onColorsChange ? (
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-4">
+        <Card variant="inset" padding="md">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="text-sm font-medium text-zinc-100">Deck colors</p>
-              <p className="mt-1 text-xs text-zinc-500">
+              <p id={colorsTitleId} className="text-sm font-medium text-foreground">
+                Deck colors
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
                 Used to clamp flexible mana production stats.
               </p>
             </div>
-            <div className="flex shrink-0 gap-2">
-              {DECK_COLORS.map(({ color, label }) => {
-                const isSelected = draftColors.includes(color);
-                return (
-                  <button
-                    key={color}
-                    type="button"
-                    aria-pressed={isSelected}
-                    aria-label={`${isSelected ? "Remove" : "Add"} ${label}`}
-                    title={label}
-                    onClick={() => onDraftColorsChange(toggleDeckColor(draftColors, color))}
-                    className={`inline-flex size-10 items-center justify-center rounded-full border transition ${
-                      isSelected
-                        ? "border-white/40 bg-zinc-950 shadow-[0_0_18px_rgba(34,211,238,0.12)]"
-                        : "border-zinc-800 bg-zinc-950 opacity-30 grayscale hover:border-zinc-700 hover:opacity-60"
-                    }`}
-                  >
-                    <ManaSymbolIcon symbol={color} label={label} className="size-7" />
-                  </button>
-                );
-              })}
-            </div>
+            <ToggleGroup
+              aria-labelledby={colorsTitleId}
+              variant="round"
+              multiple
+              value={draftColors}
+              onValueChange={(colors: DeckColor[]) =>
+                onDraftColorsChange(
+                  DECK_COLORS.flatMap(({ color }) => (colors.includes(color) ? [color] : [])),
+                )
+              }
+            >
+              {DECK_COLORS.map(({ color, label }) => (
+                <ToggleGroupItem key={color} value={color} aria-label={label} title={label}>
+                  <ManaSymbolIcon symbol={color} label={label} className="size-7" />
+                </ToggleGroupItem>
+              ))}
+            </ToggleGroup>
           </div>
-        </div>
+        </Card>
       ) : null}
 
       {onMoveToFolder ? (
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-4">
-          <button
-            type="button"
-            aria-controls={moveToFolderPanelId}
-            aria-expanded={isMoveToFolderOpen}
-            onClick={() => setIsMoveToFolderOpen((isOpen) => !isOpen)}
-            className="flex w-full items-center justify-between gap-3 rounded-lg text-left text-sm transition hover:text-zinc-100"
-          >
-            <span className="flex min-w-0 items-center gap-2 font-medium text-zinc-100">
-              <FolderInput className="size-5 shrink-0 text-zinc-500" strokeWidth={1.75} />
-              <span>Move to folder</span>
-            </span>
-            <span className="flex min-w-0 items-center gap-2 text-zinc-400">
-              <span className="truncate">{currentFolderName}</span>
-              {isMoveToFolderOpen ? (
-                <ChevronDown className="size-4 shrink-0" strokeWidth={1.75} />
-              ) : (
-                <ChevronRight className="size-4 shrink-0" strokeWidth={1.75} />
-              )}
-            </span>
-          </button>
-          {isMoveToFolderOpen ? (
-            <div
-              id={moveToFolderPanelId}
-              className="mt-3 space-y-1 rounded-xl border border-zinc-800 bg-zinc-950/60 p-1"
-            >
+        <Card variant="inset" padding="md">
+          <Collapsible open={isMoveToFolderOpen} onOpenChange={setIsMoveToFolderOpen}>
+            <CollapsibleTrigger className="flex w-full items-center justify-between gap-3 rounded-lg text-left transition hover:text-foreground">
+              <span className="flex min-w-0 items-center gap-2 font-medium text-foreground">
+                <FolderInput className="size-5 shrink-0 text-muted-foreground" strokeWidth={1.75} />
+                <span>Move to folder</span>
+              </span>
+              <span className="flex min-w-0 items-center gap-2 text-subtle-foreground">
+                <span className="truncate">{currentFolderName}</span>
+                {isMoveToFolderOpen ? (
+                  <ChevronDown className="size-4 shrink-0" strokeWidth={1.75} />
+                ) : (
+                  <ChevronRight className="size-4 shrink-0" strokeWidth={1.75} />
+                )}
+              </span>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-3 space-y-1 rounded-xl border border-border bg-background/60 p-1">
               <button
                 type="button"
                 disabled={!currentFolderId}
+                aria-current={currentFolderId ? undefined : "true"}
                 onClick={() => onMoveToFolder(deck.id, null)}
-                className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition disabled:cursor-default ${
+                className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left transition disabled:cursor-default ${
                   currentFolderId
-                    ? "text-zinc-300 hover:bg-zinc-900 hover:text-zinc-100"
-                    : "bg-cyan-400 text-cyan-950"
+                    ? "text-secondary-foreground hover:bg-surface hover:text-foreground"
+                    : "bg-primary text-primary-foreground"
                 }`}
               >
                 <FolderInput className="size-4" strokeWidth={1.75} />
@@ -448,8 +454,8 @@ function GeneralSettingsTab({
                     key={folder.id}
                     className={`flex items-center rounded-lg text-sm transition ${
                       isCurrent
-                        ? "bg-cyan-400 text-cyan-950"
-                        : "text-zinc-300 hover:bg-zinc-900 hover:text-zinc-100"
+                        ? "bg-primary text-primary-foreground"
+                        : "text-secondary-foreground hover:bg-surface hover:text-foreground"
                     }`}
                     style={{ paddingLeft: `${8 + folder.depth * 20}px` }}
                   >
@@ -457,7 +463,7 @@ function GeneralSettingsTab({
                       <button
                         type="button"
                         onClick={() => toggleFolderCollapsed(folder.id)}
-                        className="flex size-8 shrink-0 items-center justify-center rounded-md transition hover:bg-black/10"
+                        className="flex size-8 shrink-0 items-center justify-center rounded-md transition hover:bg-on-image/10"
                         aria-label={`${isCollapsed ? "Expand" : "Collapse"} ${folder.name}`}
                       >
                         {isCollapsed ? (
@@ -472,6 +478,7 @@ function GeneralSettingsTab({
                     <button
                       type="button"
                       disabled={isCurrent}
+                      aria-current={isCurrent ? "true" : undefined}
                       onClick={() => onMoveToFolder(deck.id, folder.id)}
                       className="flex min-w-0 flex-1 items-center gap-2 rounded-lg py-2 pr-3 text-left disabled:cursor-default"
                       title={folder.path}
@@ -482,58 +489,65 @@ function GeneralSettingsTab({
                   </div>
                 );
               })}
-            </div>
-          ) : null}
-        </div>
+            </CollapsibleContent>
+          </Collapsible>
+        </Card>
       ) : null}
 
-      <Button onClick={() => onExport(deck)} className="w-full justify-start px-4 py-3 text-left">
-        <Download className="size-5 text-zinc-500" strokeWidth={1.75} />
+      <Button size="lg" onClick={() => onExport(deck)} className="w-full justify-start text-left">
+        <Download className="size-5 text-muted-foreground" strokeWidth={1.75} />
         <span>Export deck list</span>
       </Button>
 
       {deck.cover && onEditCoverCrop ? (
         <Button
+          size="lg"
           onClick={() => onEditCoverCrop(deck)}
-          className="w-full justify-start px-4 py-3 text-left"
+          className="w-full justify-start text-left"
         >
-          <Image className="size-5 text-zinc-500" strokeWidth={1.75} />
+          <Image className="size-5 text-muted-foreground" strokeWidth={1.75} />
           <span>Edit cover crop</span>
         </Button>
       ) : null}
 
       {deck.cover && onClearCover ? (
         <Button
+          size="lg"
           onClick={() => onClearCover(deck.id)}
-          className="w-full justify-start px-4 py-3 text-left"
+          className="w-full justify-start text-left"
         >
-          <ImageOff className="size-5 text-zinc-500" strokeWidth={1.75} />
+          <ImageOff className="size-5 text-muted-foreground" strokeWidth={1.75} />
           <span>Clear deck cover</span>
         </Button>
       ) : null}
 
       {deck.cover?.kind === "split" && onSwapSplitCover ? (
         <Button
+          size="lg"
           onClick={() => onSwapSplitCover(deck)}
-          className="w-full justify-start px-4 py-3 text-left"
+          className="w-full justify-start text-left"
         >
-          <Shuffle className="size-5 text-zinc-500" strokeWidth={1.75} />
+          <Shuffle className="size-5 text-muted-foreground" strokeWidth={1.75} />
           <span>Swap commander cover sides</span>
         </Button>
       ) : null}
 
       {showDeleteConfirm ? (
-        <Alert tone="danger" className="space-y-3 bg-rose-950/20 p-4">
-          <p>
+        <Alert role="alert" tone="danger">
+          <AlertDescription>
             Are you sure? This will delete the deck and all {deck.saves.length} snapshot
             {deck.saves.length === 1 ? "" : "s"}.
-          </p>
-          <div className="flex gap-2">
-            <Button onClick={() => setState({ showDeleteConfirm: false })} className="flex-1">
+          </AlertDescription>
+          <AlertActions>
+            <Button
+              ref={cancelDeleteRef}
+              onClick={() => setDeleteConfirm(false)}
+              className="flex-1"
+            >
               Cancel
             </Button>
             <Button
-              variant="danger"
+              variant="destructive"
               onClick={() => {
                 onDelete(deck.id);
                 onClose();
@@ -542,32 +556,20 @@ function GeneralSettingsTab({
             >
               Delete
             </Button>
-          </div>
+          </AlertActions>
         </Alert>
       ) : (
         <Button
-          onClick={() => setState({ showDeleteConfirm: true })}
-          className="w-full justify-start px-4 py-3 text-left text-rose-400 hover:border-rose-900/50 hover:bg-rose-950/20"
+          ref={deleteButtonRef}
+          size="lg"
+          onClick={() => setDeleteConfirm(true)}
+          className="w-full justify-start text-left"
         >
           <Trash2 className="size-5" strokeWidth={1.75} />
           <span>Delete deck</span>
         </Button>
       )}
     </div>
-  );
-}
-
-function toggleDeckColor(colors: DeckColor[], color: DeckColor) {
-  const nextColors = new Set(colors);
-
-  if (nextColors.has(color)) {
-    nextColors.delete(color);
-  } else {
-    nextColors.add(color);
-  }
-
-  return DECK_COLORS.flatMap((deckColor) =>
-    nextColors.has(deckColor.color) ? [deckColor.color] : [],
   );
 }
 
@@ -620,6 +622,8 @@ function CategoriesSettingsTab({
   onShowRemovedCardGhostsChange?: (showRemovedCardGhosts: boolean) => void;
   setState: Dispatch<Partial<ModalState>>;
 }) {
+  const ghostsTitleId = useId();
+
   function handleDragEnd(event: DragEndEvent) {
     const { source, target } = event.operation;
     const targetCategoryId = target?.data.categoryId as string | undefined;
@@ -643,10 +647,11 @@ function CategoriesSettingsTab({
           value={newCategoryName}
           onChange={(event) => setState({ newCategoryName: event.target.value })}
           placeholder="New category"
+          aria-label="New category"
           inputSize="sm"
-          className="min-w-0 flex-1"
+          className="flex-1"
         />
-        <Button type="submit" variant="primary" size="sm">
+        <Button type="submit" variant="default" size="sm">
           <Plus className="size-4" />
           Add
         </Button>
@@ -659,21 +664,25 @@ function CategoriesSettingsTab({
       ) : null}
 
       {onShowRemovedCardGhostsChange ? (
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-3">
+        <Card variant="inset" padding="sm">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-sm font-medium text-zinc-100">Removed-card ghosts</p>
-              <p className="mt-1 text-xs text-zinc-500">
+              <p id={ghostsTitleId} className="text-sm font-medium text-foreground">
+                Removed-card ghosts
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
                 Keep cards visible in their old category after moving them.
               </p>
             </div>
-            <ToggleChip
-              label={showRemovedCardGhosts ? "On" : "Off"}
+            <SwitchChip
+              aria-labelledby={ghostsTitleId}
               checked={showRemovedCardGhosts}
-              onToggle={() => onShowRemovedCardGhostsChange(!showRemovedCardGhosts)}
-            />
+              onCheckedChange={onShowRemovedCardGhostsChange}
+            >
+              {showRemovedCardGhosts ? "On" : "Off"}
+            </SwitchChip>
           </div>
-        </div>
+        </Card>
       ) : null}
 
       <DragDropProvider onDragEnd={handleDragEnd}>
@@ -739,8 +748,8 @@ function CategorySettingsRow({
         draggableRef(element);
         droppableRef(element);
       }}
-      className={`rounded-xl border bg-zinc-900/40 p-3 transition ${
-        isDropTarget ? "border-cyan-700/70" : "border-zinc-800"
+      className={`rounded-xl border bg-muted p-3 transition ${
+        isDropTarget ? "border-cyan-700/70" : "border-border"
       } ${isDragging ? "opacity-50" : "opacity-100"}`}
     >
       {isRenaming ? (
@@ -749,10 +758,11 @@ function CategorySettingsRow({
           <Input
             value={categoryName}
             onChange={(event) => setState({ categoryName: event.target.value })}
+            aria-label="Category name"
             inputSize="sm"
-            className="min-w-0 flex-1 rounded-lg bg-zinc-950 px-3"
+            className="flex-1 bg-background"
           />
-          <Button type="submit" variant="primary" size="sm" className="rounded-lg px-3">
+          <Button type="submit" variant="default" size="sm">
             Save
           </Button>
         </form>
@@ -761,31 +771,31 @@ function CategorySettingsRow({
           <div className="flex min-w-0 items-center gap-2">
             <DragHandle handleRef={handleRef} categoryName={category.name} />
             <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-zinc-100">{category.name}</p>
-              <p className="mt-1 text-xs text-zinc-500">
+              <p className="truncate text-sm font-medium text-foreground">{category.name}</p>
+              <p className="mt-1 text-xs text-muted-foreground">
                 {cardCount} card{cardCount === 1 ? "" : "s"}
               </p>
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            <ToggleChip
-              label="Hide"
+            <SwitchChip
+              aria-label={`Hide ${category.name}`}
               checked={category.hidden === true}
-              onToggle={() =>
-                updateCategory(category.id, categories, onCategoriesChange, {
-                  hidden: !category.hidden,
-                })
+              onCheckedChange={(hidden) =>
+                updateCategory(category.id, categories, onCategoriesChange, { hidden })
               }
-            />
-            <ToggleChip
-              label="In Deck"
+            >
+              Hide
+            </SwitchChip>
+            <SwitchChip
+              aria-label={`${category.name} in deck`}
               checked={category.includeInDeck !== false}
-              onToggle={() =>
-                updateCategory(category.id, categories, onCategoriesChange, {
-                  includeInDeck: category.includeInDeck === false,
-                })
+              onCheckedChange={(includeInDeck) =>
+                updateCategory(category.id, categories, onCategoriesChange, { includeInDeck })
               }
-            />
+            >
+              In Deck
+            </SwitchChip>
             <Button
               onClick={() =>
                 setState({
@@ -794,23 +804,68 @@ function CategorySettingsRow({
                 })
               }
               size="sm"
-              className="rounded-lg py-1.5"
+              aria-label={`Rename ${category.name}`}
             >
               Rename
             </Button>
-            <Button
-              onClick={() => removeCategory(category.id, categories, cards, onCategoriesChange)}
-              disabled={isBlocked}
-              title={isBlocked ? "Move cards out before removing." : "Remove category"}
-              size="sm"
-              className="rounded-lg py-1.5 text-rose-400 hover:border-rose-900/50"
-            >
-              Remove
-            </Button>
+            <RemoveCategoryButton
+              categoryName={category.name}
+              isBlocked={isBlocked}
+              onRemove={() => removeCategory(category.id, categories, cards, onCategoriesChange)}
+            />
           </div>
         </div>
       )}
     </div>
+  );
+}
+
+const blockedReason = "Move cards out before removing.";
+
+// A disabled button is pointer-inert, so a focusable group carries the hover title and
+// describes itself with persistent sr-only text.
+function RemoveCategoryButton({
+  categoryName,
+  isBlocked,
+  onRemove,
+}: {
+  categoryName: string;
+  isBlocked: boolean;
+  onRemove: () => void;
+}) {
+  const reasonId = useId();
+
+  if (!isBlocked) {
+    return (
+      <Button
+        onClick={onRemove}
+        title="Remove category"
+        size="sm"
+        aria-label={`Remove ${categoryName}`}
+      >
+        Remove
+      </Button>
+    );
+  }
+
+  return (
+    <>
+      <span
+        tabIndex={0}
+        role="group"
+        title={blockedReason}
+        aria-label={`Remove ${categoryName}`}
+        aria-describedby={reasonId}
+        className={`inline-flex rounded-lg ${focusRing}`}
+      >
+        <Button disabled size="sm" aria-label={`Remove ${categoryName}`}>
+          Remove
+        </Button>
+      </span>
+      <span id={reasonId} className="sr-only">
+        {blockedReason}
+      </span>
+    </>
   );
 }
 
@@ -822,14 +877,15 @@ function DragHandle({
   categoryName: string;
 }) {
   return (
-    <button
+    <Button
       ref={handleRef}
-      type="button"
+      variant="ghost"
+      size="none"
       aria-label={`Reorder ${categoryName}`}
-      className="rounded-md p-1 text-zinc-600 transition hover:bg-zinc-800 hover:text-zinc-300 active:cursor-grabbing"
+      className="rounded-md p-1 text-faint-foreground hover:bg-secondary hover:text-secondary-foreground active:cursor-grabbing"
     >
       <GripVertical className="size-4" />
-    </button>
+    </Button>
   );
 }
 

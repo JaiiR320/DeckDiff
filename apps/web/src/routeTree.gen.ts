@@ -9,21 +9,16 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as JudgeRouteImport } from './routes/judge'
-import { Route as DecksRouteImport } from './routes/decks'
-import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as DecksRouteImport } from './routes/decks'
+import { Route as JudgeRouteImport } from './routes/judge'
 import { Route as DecksDeckIdRouteImport } from './routes/decks_.$deckId'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
-const JudgeRoute = JudgeRouteImport.update({
-  id: '/judge',
-  path: '/judge',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DecksRoute = DecksRouteImport.update({
-  id: '/decks',
-  path: '/decks',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -31,9 +26,14 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const DecksRoute = DecksRouteImport.update({
+  id: '/decks',
+  path: '/decks',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const JudgeRoute = JudgeRouteImport.update({
+  id: '/judge',
+  path: '/judge',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DecksDeckIdRoute = DecksDeckIdRouteImport.update({
@@ -75,12 +75,7 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | '/'
-    | '/auth'
-    | '/decks'
-    | '/judge'
-    | '/decks/$deckId'
-    | '/api/auth/$'
+    '/' | '/auth' | '/decks' | '/judge' | '/decks/$deckId' | '/api/auth/$'
   fileRoutesByTo: FileRoutesByTo
   to: '/' | '/auth' | '/decks' | '/judge' | '/decks/$deckId' | '/api/auth/$'
   id:
@@ -104,18 +99,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/judge': {
-      id: '/judge'
-      path: '/judge'
-      fullPath: '/judge'
-      preLoaderRoute: typeof JudgeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/decks': {
-      id: '/decks'
-      path: '/decks'
-      fullPath: '/decks'
-      preLoaderRoute: typeof DecksRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -125,11 +113,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/decks': {
+      id: '/decks'
+      path: '/decks'
+      fullPath: '/decks'
+      preLoaderRoute: typeof DecksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/judge': {
+      id: '/judge'
+      path: '/judge'
+      fullPath: '/judge'
+      preLoaderRoute: typeof JudgeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/decks_/$deckId': {

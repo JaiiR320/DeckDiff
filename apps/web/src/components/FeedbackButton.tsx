@@ -1,12 +1,28 @@
+import { Alert } from "@jaiir320/design-system/components/alert";
+import { Button, buttonVariants } from "@jaiir320/design-system/components/button";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@jaiir320/design-system/components/dialog";
+import { Empty, EmptyMedia } from "@jaiir320/design-system/components/empty";
+import {
+  Field,
+  FieldControl,
+  FieldLabel,
+  FieldLegend,
+  FieldSet,
+} from "@jaiir320/design-system/components/field";
+import { Input } from "@jaiir320/design-system/components/input";
+import { Textarea } from "@jaiir320/design-system/components/textarea";
+import { ToggleGroup, ToggleGroupItem } from "@jaiir320/design-system/components/toggle-group";
 import { useReducer } from "react";
 import type { FormEvent } from "react";
 import { Bug, Check, Lightbulb, MessageSquarePlus, X } from "lucide-react";
-import { Alert } from "#/components/ui/Alert";
-import { Button } from "#/components/ui/Button";
-import { IconButton } from "#/components/ui/IconButton";
-import { Input } from "#/components/ui/Input";
-import { Modal } from "#/components/ui/Modal";
-import { Textarea } from "#/components/ui/Textarea";
 import { createGithubIssue } from "#/server/github";
 
 type IssueType = "bug" | "feature";
@@ -80,138 +96,128 @@ export function FeedbackButton() {
   const isLoading = submitState.status === "loading";
 
   return (
-    <>
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => (open ? setState({ isOpen: true }) : handleClose())}
+    >
       {/* Floating trigger button */}
-      <IconButton
-        aria-label="Send feedback"
-        onClick={() => setState({ isOpen: true })}
-        size="lg"
-        className="fixed bottom-6 right-6 z-[1000] border border-zinc-700 bg-zinc-800 text-zinc-300 shadow-lg shadow-black/40 hover:bg-zinc-700 hover:text-cyan-300"
+      <DialogTrigger
+        render={
+          <Button
+            variant="raised"
+            size="icon-lg"
+            aria-label="Send feedback"
+            className="fixed right-6 bottom-6 z-(--z-sticky) rounded-xl border-border hover:border-border-strong hover:bg-surface"
+          />
+        }
       >
         <MessageSquarePlus className="size-5" strokeWidth={1.75} />
-      </IconButton>
+      </DialogTrigger>
 
-      {/* Modal */}
-      {isOpen && (
-        <Modal ariaLabel="Close feedback modal" onClose={handleClose}>
-          {/* Header */}
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-zinc-100">Send Feedback</h2>
-            <IconButton
-              aria-label="Close"
-              variant="ghost"
-              size="sm"
-              onClick={handleClose}
-              className="text-zinc-500"
-            >
-              <X className="size-5" />
-            </IconButton>
-          </div>
+      <DialogContent>
+        <DialogHeader className="items-center">
+          <DialogTitle>Send Feedback</DialogTitle>
+          <DialogClose render={<Button variant="icon-ghost" size="icon-sm" aria-label="Close" />}>
+            <X className="size-5" />
+          </DialogClose>
+        </DialogHeader>
 
-          {/* Success state */}
-          {submitState.status === "success" ? (
-            <div className="mt-6 flex flex-col items-center gap-4 py-4 text-center">
-              <div className="flex size-12 items-center justify-center rounded-full border border-cyan-800 bg-cyan-950/50">
-                <Check className="size-6 text-cyan-400" />
-              </div>
-              <div>
-                <p className="text-base font-semibold text-zinc-100">Issue created!</p>
-                <p className="mt-1 text-sm text-zinc-400">Thanks for your feedback.</p>
-              </div>
-              <a
-                href={submitState.issueUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-cyan-400 underline underline-offset-2 hover:text-cyan-300"
-              >
-                View issue #{submitState.issueNumber} on GitHub
-              </a>
-              <Button onClick={handleClose}>Close</Button>
+        {/* Success state */}
+        {submitState.status === "success" ? (
+          <Empty className="mt-6 py-4 text-base">
+            <EmptyMedia className="size-12 rounded-full border border-selected-border bg-info-surface/50">
+              <Check className="size-6 text-primary" />
+            </EmptyMedia>
+            <div>
+              <p className="text-base font-semibold text-foreground">Issue created!</p>
+              <p className="mt-1 text-sm text-subtle-foreground">Thanks for your feedback.</p>
             </div>
-          ) : (
-            /* Form state */
-            <form className="mt-5" onSubmit={handleSubmit}>
-              {/* Issue type selector */}
-              <p className="block text-sm font-medium text-zinc-400">Type</p>
-              <div className="mt-2 flex gap-2">
+            <a
+              href={submitState.issueUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={buttonVariants({ variant: "link", size: "none", className: "text-sm" })}
+            >
+              View issue #{submitState.issueNumber} on GitHub
+            </a>
+            <DialogClose render={<Button />}>Close</DialogClose>
+          </Empty>
+        ) : (
+          /* Form state */
+          <form className="mt-5" onSubmit={handleSubmit}>
+            {/* Issue type selector */}
+            <FieldSet>
+              <FieldLegend id="feedback-type-label">Type</FieldLegend>
+              <ToggleGroup<IssueType>
+                aria-labelledby="feedback-type-label"
+                value={[issueType]}
+                onValueChange={(value) => {
+                  if (value[0]) setState({ issueType: value[0] });
+                }}
+              >
                 {(["bug", "feature"] as const).map((type) => {
-                  const isActive = issueType === type;
                   const label = type === "bug" ? "Bug Report" : "Feature Request";
                   const Icon = type === "bug" ? Bug : Lightbulb;
                   return (
-                    <button
+                    <ToggleGroupItem<IssueType>
                       key={type}
-                      type="button"
-                      onClick={() => setState({ issueType: type })}
-                      aria-pressed={isActive}
-                      className={`flex flex-1 items-center justify-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium transition ${
-                        isActive
-                          ? "border-cyan-800 bg-cyan-950/40 text-cyan-200"
-                          : "border-zinc-800 bg-zinc-900 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200"
-                      }`}
+                      value={type}
+                      className="flex-1 not-data-pressed:bg-surface not-data-pressed:text-subtle-foreground not-data-pressed:hover:text-strong-foreground"
                     >
                       <Icon className="size-4" strokeWidth={1.75} />
                       {label}
-                    </button>
+                    </ToggleGroupItem>
                   );
                 })}
-              </div>
+              </ToggleGroup>
+            </FieldSet>
 
-              {/* Title */}
-              <label
-                className="mt-4 block text-sm font-medium text-zinc-400"
-                htmlFor="feedback-title"
-              >
-                Title
-              </label>
+            {/* Title */}
+            <Field className="mt-4">
+              <FieldLabel>Title</FieldLabel>
               <Input
                 id="feedback-title"
                 required
                 value={title}
-                onChange={(e) => setState({ title: e.target.value })}
+                onValueChange={(value) => setState({ title: value })}
                 placeholder="Brief summary"
-                className="mt-2 w-full"
               />
+            </Field>
 
-              {/* Description */}
-              <label
-                className="mt-4 block text-sm font-medium text-zinc-400"
-                htmlFor="feedback-description"
-              >
-                Description
-              </label>
-              <Textarea
+            {/* Description; pb keeps the gap the old inline textarea's line box left below it */}
+            <Field className="mt-4 pb-[7px]">
+              <FieldLabel>Description</FieldLabel>
+              <FieldControl
                 id="feedback-description"
                 required
                 value={body}
-                onChange={(e) => setState({ body: e.target.value })}
+                onValueChange={(value) => setState({ body: value })}
                 placeholder="Describe the issue or feature in detail…"
-                rows={5}
-                className="mt-2 w-full resize-y"
+                render={<Textarea rows={5} className="resize-y" />}
               />
+            </Field>
 
-              {/* Error message */}
-              {submitState.status === "error" && (
-                <Alert tone="danger" className="mt-3 rounded-lg px-3 py-2 text-rose-400">
-                  {submitState.message}
-                </Alert>
-              )}
+            {/* Error message */}
+            {submitState.status === "error" && (
+              <Alert role="alert" className="mt-3 text-destructive-text">
+                {submitState.message}
+              </Alert>
+            )}
 
-              {/* Actions */}
-              <div className="mt-5 flex justify-end gap-3">
-                <Button onClick={handleClose}>Cancel</Button>
-                <Button
-                  type="submit"
-                  variant="primary"
-                  disabled={isLoading || !title.trim() || !body.trim()}
-                >
-                  {isLoading ? "Submitting…" : "Submit"}
-                </Button>
-              </div>
-            </form>
-          )}
-        </Modal>
-      )}
-    </>
+            {/* Actions */}
+            <DialogFooter>
+              <DialogClose render={<Button />}>Cancel</DialogClose>
+              <Button
+                type="submit"
+                variant="default"
+                disabled={isLoading || !title.trim() || !body.trim()}
+              >
+                {isLoading ? "Submitting…" : "Submit"}
+              </Button>
+            </DialogFooter>
+          </form>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
