@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "@jaiir320/design-system/components/dialog";
 import { Textarea } from "@jaiir320/design-system/components/textarea";
+import { buttonLooks } from "#/components/buttonLooks";
 
 type ImportDeckModalProps = {
   hasCards: boolean;
@@ -44,7 +45,14 @@ export function ImportDeckModal({
             </DialogDescription>
           </div>
           <DialogClose
-            render={<Button variant="icon-ghost" size="icon" aria-label="Close import modal" />}
+            render={
+              <Button
+                variant={null}
+                size="icon"
+                className={buttonLooks.iconGhost}
+                aria-label="Close import modal"
+              />
+            }
           >
             <X className="size-5" />
           </DialogClose>

@@ -155,7 +155,7 @@ export function JudgeChat({ getResponse }: JudgeChatProps) {
                         key={suggestion}
                         size="xs"
                         onClick={() => void handleSuggestionClick(message, suggestion)}
-                        className="border-border-strong text-strong-foreground hover:border-ring hover:bg-transparent hover:text-selected-foreground"
+                        className="rounded-lg border-border-strong text-strong-foreground hover:border-ring hover:bg-transparent hover:text-selected-foreground"
                       >
                         {suggestion}
                       </Button>
@@ -168,7 +168,11 @@ export function JudgeChat({ getResponse }: JudgeChatProps) {
         )}
       </div>
 
-      {errorMessage ? <Alert role="alert">{errorMessage}</Alert> : null}
+      {errorMessage ? (
+        <Alert tone="destructive" role="alert">
+          {errorMessage}
+        </Alert>
+      ) : null}
 
       <form className="space-y-3" onSubmit={handleSubmit}>
         <Textarea

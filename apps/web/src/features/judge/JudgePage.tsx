@@ -15,7 +15,6 @@ export function JudgePage() {
     <main className="mx-auto w-full p-8">
       <Card
         render={<section />}
-        variant="glass"
         padding="lg"
         className="rounded-2xl bg-surface-glass/70 shadow-2xl shadow-black/20"
       >

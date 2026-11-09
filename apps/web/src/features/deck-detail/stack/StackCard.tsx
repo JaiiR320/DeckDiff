@@ -19,6 +19,7 @@ import { cardLayoutToCssVars, computeCardLayout, type CardLayout } from "./cardL
 import { createDeckTileCover } from "./deckTileCover";
 import { cardDragId } from "./stackIds";
 import { useFallbackCardImage } from "./useFallbackCardImage";
+import { buttonLooks } from "#/components/buttonLooks";
 
 const noCategories: DeckCategory[] = [];
 
@@ -188,7 +189,7 @@ export function StackCard({
             {readOnly ? null : (
               <>
                 <Button
-                  variant="overlay"
+                  variant={null}
                   size="none"
                   aria-label={`Increase ${row.name} quantity`}
                   onClick={() => onAdjustQuantity?.(row, 1)}
@@ -197,7 +198,7 @@ export function StackCard({
                   <Plus className="size-[var(--card-control-icon-size)]" strokeWidth={2.5} />
                 </Button>
                 <Button
-                  variant="overlay"
+                  variant={null}
                   size="none"
                   aria-label={`Decrease ${row.name} quantity`}
                   onClick={() => onAdjustQuantity?.(row, -1)}
@@ -210,7 +211,7 @@ export function StackCard({
             )}
             {hasMultipleFaces ? (
               <Button
-                variant="overlay"
+                variant={null}
                 size="none"
                 aria-label={`Flip ${row.name}`}
                 title="Flip card"
@@ -234,7 +235,7 @@ export function StackCard({
                   aria-label={`${row.name} actions`}
                   disabled={!onChangePrinting && (!onSetDeckCover || !imageUrl)}
                   onClick={(event) => event.stopPropagation()}
-                  render={<Button variant="overlay" size="none" className={railButtonClassName} />}
+                  render={<Button variant={null} size="none" className={railButtonClassName} />}
                 >
                   <MoreHorizontal
                     className="size-[var(--card-control-icon-size)]"
@@ -287,7 +288,7 @@ export function StackCard({
   );
 }
 
-const railButtonClassName = "size-[var(--card-control-size)]";
+const railButtonClassName = `${buttonLooks.overlay} size-[var(--card-control-size)]`;
 
 function formatPrice(price: number | undefined) {
   return price === undefined ? "--" : `$${price.toFixed(2)}`;

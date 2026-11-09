@@ -373,7 +373,7 @@ function CardSearch({ onPreviewCard }: Pick<EditorHeaderProps, "onPreviewCard">)
           aria-label="Add card"
           autoComplete="off"
           placeholder="Add card"
-          inputSize="sm"
+          inputSize="md"
           className="py-2.5"
         />
       </div>

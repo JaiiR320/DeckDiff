@@ -24,6 +24,7 @@ import { useReducer } from "react";
 import type { FormEvent } from "react";
 import { Bug, Check, Lightbulb, MessageSquarePlus, X } from "lucide-react";
 import { createGithubIssue } from "#/server/github";
+import { buttonLooks } from "#/components/buttonLooks";
 
 type IssueType = "bug" | "feature";
 
@@ -104,10 +105,10 @@ export function FeedbackButton() {
       <DialogTrigger
         render={
           <Button
-            variant="raised"
+            variant={null}
             size="icon-lg"
             aria-label="Send feedback"
-            className="fixed right-6 bottom-6 z-(--z-sticky) rounded-xl border-border hover:border-border-strong hover:bg-surface"
+            className={`${buttonLooks.raised} fixed right-6 bottom-6 z-(--z-sticky) rounded-xl border-border hover:border-border-strong hover:bg-surface`}
           />
         }
       >
@@ -117,7 +118,16 @@ export function FeedbackButton() {
       <DialogContent>
         <DialogHeader className="items-center">
           <DialogTitle>Send Feedback</DialogTitle>
-          <DialogClose render={<Button variant="icon-ghost" size="icon-sm" aria-label="Close" />}>
+          <DialogClose
+            render={
+              <Button
+                variant={null}
+                size="icon-sm"
+                className={buttonLooks.iconGhost}
+                aria-label="Close"
+              />
+            }
+          >
             <X className="size-5" />
           </DialogClose>
         </DialogHeader>
@@ -176,6 +186,7 @@ export function FeedbackButton() {
             <Field className="mt-4">
               <FieldLabel>Title</FieldLabel>
               <Input
+                inputSize="lg"
                 id="feedback-title"
                 required
                 value={title}
@@ -199,7 +210,7 @@ export function FeedbackButton() {
 
             {/* Error message */}
             {submitState.status === "error" && (
-              <Alert role="alert" className="mt-3 text-destructive-text">
+              <Alert tone="destructive" role="alert" className="mt-3 text-destructive-text">
                 {submitState.message}
               </Alert>
             )}

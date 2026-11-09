@@ -4,6 +4,7 @@ import { Button } from "@jaiir320/design-system/components/button";
 import { Card } from "@jaiir320/design-system/components/card";
 import type { DeckItem, DeckTileCover, DeckTileCoverCard } from "../../lib/deck";
 import { getImageCropStyle } from "../../lib/imageCrop";
+import { buttonLooks } from "#/components/buttonLooks";
 
 type DeckCardProps = {
   deck: DeckItem;
@@ -22,9 +23,9 @@ export function DeckCard({ deck, onEdit }: DeckCardProps) {
         onEdit(deck);
       }}
       aria-label={`Edit ${deck.name}`}
-      variant="icon-ghost"
+      variant={null}
       size="icon"
-      className={`absolute right-6 top-6 z-20 cursor-pointer ${className}`}
+      className={`${buttonLooks.iconGhost} absolute right-6 top-6 z-20 cursor-pointer ${className}`}
     >
       <MoreVertical className="size-5" strokeWidth={1.75} />
     </Button>

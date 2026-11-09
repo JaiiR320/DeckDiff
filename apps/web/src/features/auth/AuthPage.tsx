@@ -90,7 +90,6 @@ export function AuthPage() {
   return (
     <main className="flex h-full items-center justify-center px-6 py-12">
       <Card
-        variant="glass"
         padding="xl"
         className="w-full max-w-md rounded-3xl bg-surface-glass/90 shadow-2xl shadow-black/40"
       >
@@ -117,6 +116,7 @@ export function AuthPage() {
           <Field>
             <FieldLabel>Email</FieldLabel>
             <Input
+              inputSize="lg"
               id="auth-email"
               type="email"
               autoComplete="email"
@@ -130,6 +130,7 @@ export function AuthPage() {
           <Field>
             <FieldLabel>Password</FieldLabel>
             <Input
+              inputSize="lg"
               id="auth-password"
               type="password"
               autoComplete={mode === "sign-in" ? "current-password" : "new-password"}
@@ -141,7 +142,11 @@ export function AuthPage() {
             />
           </Field>
 
-          {errorMessage ? <Alert role="alert">{errorMessage}</Alert> : null}
+          {errorMessage ? (
+            <Alert tone="destructive" role="alert">
+              {errorMessage}
+            </Alert>
+          ) : null}
 
           <Button type="submit" variant="default" disabled={isSubmitting} className="w-full py-3">
             {isSubmitting ? <Spinner /> : null}

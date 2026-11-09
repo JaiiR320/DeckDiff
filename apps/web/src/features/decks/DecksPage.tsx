@@ -48,6 +48,7 @@ import {
   updateDeckCoverForUser,
   updateFolderBackgroundForUser,
 } from "#/server/decks";
+import { buttonLooks } from "#/components/buttonLooks";
 
 type DecksPageState = {
   isCreateDeckOpen: boolean;
@@ -487,7 +488,7 @@ export function DecksPage() {
     <>
       <main className="mx-auto w-full p-8">
         {errorMessage ? (
-          <Alert render={<p />} role="alert" className="mb-6">
+          <Alert tone="destructive" render={<p />} role="alert" className="mb-6">
             {errorMessage}
           </Alert>
         ) : null}
@@ -864,9 +865,9 @@ function FolderCard({ folder, path, onOpen, onEdit, onFocus }: FolderCardProps) 
             onEdit(folder);
           }}
           aria-label={`Open ${folder.name} settings`}
-          variant="icon-ghost"
+          variant={null}
           size="icon"
-          className="cursor-pointer"
+          className={`${buttonLooks.iconGhost} cursor-pointer`}
         >
           <MoreVertical className="size-4" strokeWidth={1.75} />
         </Button>
@@ -942,6 +943,7 @@ function FolderSettingsModal({
           <Field className="gap-3">
             <FieldLabel>Folder name</FieldLabel>
             <Input
+              inputSize="lg"
               value={folderName}
               onChange={(event) => onFolderNameChange(event.target.value)}
               placeholder="Enter a folder name"
@@ -962,6 +964,7 @@ function FolderSettingsModal({
           <Field className="gap-3">
             <FieldLabel>Background image URL</FieldLabel>
             <Input
+              inputSize="lg"
               value={folderBackgroundUrl}
               onChange={(event) => onFolderBackgroundUrlChange(event.target.value)}
               placeholder="https://cards.scryfall.io/..."
@@ -989,6 +992,7 @@ function FolderSettingsModal({
 
         {showDeleteConfirm ? (
           <Alert
+            tone="destructive"
             role="alert"
             size="panel"
             aria-label={`Confirm delete ${folder.name}`}

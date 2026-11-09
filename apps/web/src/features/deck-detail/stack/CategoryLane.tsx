@@ -58,7 +58,7 @@ export function CategoryLane({
             <Button
               size="xs"
               onClick={() => onRemoveLane(laneIndex)}
-              className="bg-background hover:bg-background hover:text-foreground"
+              className="rounded-lg bg-background hover:bg-background hover:text-foreground"
             >
               Remove lane
             </Button>
