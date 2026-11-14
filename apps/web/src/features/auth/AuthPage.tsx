@@ -108,8 +108,8 @@ export function AuthPage() {
           }}
           className="mt-6"
         >
-          <ToggleGroupItem<Mode> value="sign-in">Sign in</ToggleGroupItem>
-          <ToggleGroupItem<Mode> value="sign-up">Sign up</ToggleGroupItem>
+          <ToggleGroupItem value="sign-in">Sign in</ToggleGroupItem>
+          <ToggleGroupItem value="sign-up">Sign up</ToggleGroupItem>
         </ToggleGroup>
 
         <form className="mt-6 space-y-4" onSubmit={handleSubmit}>

@@ -34,7 +34,7 @@ export function ImportDeckModal({
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent size="2xl" initialFocus={textareaRef}>
+      <DialogContent size="2xl" initialFocus={() => textareaRef.current}>
         <DialogHeader>
           <div>
             <DialogTitle>Import Deck</DialogTitle>

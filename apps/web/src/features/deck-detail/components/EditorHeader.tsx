@@ -389,7 +389,7 @@ function CardSearch({ onPreviewCard }: Pick<EditorHeaderProps, "onPreviewCard">)
             return;
           }
           // Pressing the anchored input is not an outside press.
-          const target = details.event.target;
+          const target = details.event?.target;
           if (target instanceof Node && containerRef.current?.contains(target)) {
             return;
           }
@@ -399,11 +399,12 @@ function CardSearch({ onPreviewCard }: Pick<EditorHeaderProps, "onPreviewCard">)
       >
         <PopoverContent
           ref={popupRef}
-          anchor={containerRef}
+          anchor={{ getBoundingClientRect: () => containerRef.current!.getBoundingClientRect() }}
           align="start"
-          initialFocus={false}
-          // Escape from a focused result returns to the input; pointer closes leave focus alone.
-          finalFocus={(closeType) => (closeType === "keyboard" ? inputRef.current : false)}
+          initialFocus="none"
+          // Escape from a focused result returns to the input. UI SDK leaves focus alone on
+          // pointer closes, which never happen with focus inside.
+          finalFocus={() => inputRef.current}
           aria-label="Search results"
           onMouseEnter={resetInactivityTimer}
           onMouseMove={resetInactivityTimer}

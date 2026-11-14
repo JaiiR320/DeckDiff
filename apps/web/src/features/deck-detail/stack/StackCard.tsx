@@ -146,91 +146,93 @@ export function StackCard({
       }
       onFocus={onHover}
     >
-      <div
-        ref={setCardRef}
-        onPointerEnter={onHover}
-        style={cardStyle}
-        className={`pointer-events-auto relative aspect-[488/680] overflow-hidden rounded-xl bg-surface shadow-lg shadow-black/30 [container-type:inline-size] ${isChanged ? "ring-2" : "ring-1"} transition-all duration-300 ${isMoveDisabled ? "" : "cursor-grab active:cursor-grabbing"} ${isDragging ? "scale-[1.04] rotate-1 opacity-90 shadow-2xl shadow-info-surface/50 ring-2" : ""} ${ringColorClass}`}
-      >
-        {imageUrl ? (
-          <img
-            src={imageUrl}
-            alt={row.name}
-            draggable={false}
-            className="h-full w-full object-cover"
-            loading="lazy"
-          />
-        ) : (
-          <div className="flex h-full items-start justify-center bg-surface px-3 pt-8 text-center text-sm font-semibold text-subtle-foreground">
-            {row.name}
+      {/* The menu content sits outside the draggable card: UI SDK renders popups in place, and
+          presses inside the card would start a drag. */}
+      <DropdownMenu>
+        <div
+          ref={setCardRef}
+          onPointerEnter={onHover}
+          style={cardStyle}
+          className={`pointer-events-auto relative aspect-[488/680] overflow-hidden rounded-xl bg-surface shadow-lg shadow-black/30 [container-type:inline-size] ${isChanged ? "ring-2" : "ring-1"} transition-all duration-300 ${isMoveDisabled ? "" : "cursor-grab active:cursor-grabbing"} ${isDragging ? "scale-[1.04] rotate-1 opacity-90 shadow-2xl shadow-info-surface/50 ring-2" : ""} ${ringColorClass}`}
+        >
+          {imageUrl ? (
+            <img
+              src={imageUrl}
+              alt={row.name}
+              draggable={false}
+              className="h-full w-full object-cover"
+              loading="lazy"
+            />
+          ) : (
+            <div className="flex h-full items-start justify-center bg-surface px-3 pt-8 text-center text-sm font-semibold text-subtle-foreground">
+              {row.name}
+            </div>
+          )}
+
+          <div className="absolute left-0 top-0 rounded-br-lg bg-surface-glass/75 px-[var(--card-badge-padding-x)] py-[var(--card-badge-padding-y)] font-mono text-[length:var(--card-badge-font-size)] font-semibold text-on-image-foreground shadow-lg shadow-black/30">
+            {row.currentQuantity}
           </div>
-        )}
 
-        <div className="absolute left-0 top-0 rounded-br-lg bg-surface-glass/75 px-[var(--card-badge-padding-x)] py-[var(--card-badge-padding-y)] font-mono text-[length:var(--card-badge-font-size)] font-semibold text-on-image-foreground shadow-lg shadow-black/30">
-          {row.currentQuantity}
-        </div>
+          {viewState.showEdhrecRank && row.edhrecRank != null ? (
+            <div className="absolute right-0 top-0 rounded-bl-lg bg-surface-glass/75 px-[var(--card-badge-padding-x)] py-[var(--card-badge-padding-y)] font-mono text-[length:var(--card-badge-font-size)] font-semibold text-on-image-foreground shadow-lg shadow-black/30">
+              #{row.edhrecRank}
+            </div>
+          ) : null}
 
-        {viewState.showEdhrecRank && row.edhrecRank != null ? (
-          <div className="absolute right-0 top-0 rounded-bl-lg bg-surface-glass/75 px-[var(--card-badge-padding-x)] py-[var(--card-badge-padding-y)] font-mono text-[length:var(--card-badge-font-size)] font-semibold text-on-image-foreground shadow-lg shadow-black/30">
-            #{row.edhrecRank}
+          <div className="absolute bottom-0 left-0 rounded-tr-lg bg-surface-glass/75 px-[var(--card-badge-padding-x)] py-[var(--card-badge-padding-y)] font-mono text-[length:var(--card-badge-font-size)] font-semibold text-on-image-foreground shadow-lg shadow-black/30">
+            {formatPrice(row.priceUsd)}
           </div>
-        ) : null}
 
-        <div className="absolute bottom-0 left-0 rounded-tr-lg bg-surface-glass/75 px-[var(--card-badge-padding-x)] py-[var(--card-badge-padding-y)] font-mono text-[length:var(--card-badge-font-size)] font-semibold text-on-image-foreground shadow-lg shadow-black/30">
-          {formatPrice(row.priceUsd)}
-        </div>
+          <div className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-on-image/45 to-transparent opacity-80" />
 
-        <div className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-on-image/45 to-transparent opacity-80" />
-
-        {viewState.showControls ? (
-          <div
-            className={`absolute right-[var(--card-control-right)] top-[var(--card-control-top)] z-20 flex -translate-y-1/2 flex-col rounded-lg border border-on-image-border/20 bg-surface-glass/45 shadow-xl shadow-black/30 backdrop-blur-sm transition duration-200 ${viewState.hovered ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"}`}
-          >
-            {readOnly ? null : (
-              <>
+          {viewState.showControls ? (
+            <div
+              className={`absolute right-[var(--card-control-right)] top-[var(--card-control-top)] z-20 flex -translate-y-1/2 flex-col rounded-lg border border-on-image-border/20 bg-surface-glass/45 shadow-xl shadow-black/30 backdrop-blur-sm transition duration-200 ${viewState.hovered ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"}`}
+            >
+              {readOnly ? null : (
+                <>
+                  <Button
+                    variant={null}
+                    size="none"
+                    aria-label={`Increase ${row.name} quantity`}
+                    onClick={() => onAdjustQuantity?.(row, 1)}
+                    className={railButtonClassName}
+                  >
+                    <Plus className="size-[var(--card-control-icon-size)]" strokeWidth={2.5} />
+                  </Button>
+                  <Button
+                    variant={null}
+                    size="none"
+                    aria-label={`Decrease ${row.name} quantity`}
+                    onClick={() => onAdjustQuantity?.(row, -1)}
+                    disabled={row.currentQuantity === 0 && row.baselineQuantity === 0}
+                    className={`${railButtonClassName} border-t border-on-image-border/20`}
+                  >
+                    <Minus className="size-[var(--card-control-icon-size)]" strokeWidth={2.5} />
+                  </Button>
+                </>
+              )}
+              {hasMultipleFaces ? (
                 <Button
                   variant={null}
                   size="none"
-                  aria-label={`Increase ${row.name} quantity`}
-                  onClick={() => onAdjustQuantity?.(row, 1)}
-                  className={railButtonClassName}
-                >
-                  <Plus className="size-[var(--card-control-icon-size)]" strokeWidth={2.5} />
-                </Button>
-                <Button
-                  variant={null}
-                  size="none"
-                  aria-label={`Decrease ${row.name} quantity`}
-                  onClick={() => onAdjustQuantity?.(row, -1)}
-                  disabled={row.currentQuantity === 0 && row.baselineQuantity === 0}
+                  aria-label={`Flip ${row.name}`}
+                  title="Flip card"
+                  onPointerDown={(event) => event.stopPropagation()}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setFaceState((current) => ({
+                      identity: faceIdentity,
+                      index:
+                        (current.identity === faceIdentity ? current.index + 1 : 1) % faces.length,
+                    }));
+                  }}
                   className={`${railButtonClassName} border-t border-on-image-border/20`}
                 >
-                  <Minus className="size-[var(--card-control-icon-size)]" strokeWidth={2.5} />
+                  <RotateCw className="size-[var(--card-control-icon-size)]" strokeWidth={2.5} />
                 </Button>
-              </>
-            )}
-            {hasMultipleFaces ? (
-              <Button
-                variant={null}
-                size="none"
-                aria-label={`Flip ${row.name}`}
-                title="Flip card"
-                onPointerDown={(event) => event.stopPropagation()}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  setFaceState((current) => ({
-                    identity: faceIdentity,
-                    index:
-                      (current.identity === faceIdentity ? current.index + 1 : 1) % faces.length,
-                  }));
-                }}
-                className={`${railButtonClassName} border-t border-on-image-border/20`}
-              >
-                <RotateCw className="size-[var(--card-control-icon-size)]" strokeWidth={2.5} />
-              </Button>
-            ) : null}
-            <div className="border-t border-on-image-border/20">
-              <DropdownMenu>
+              ) : null}
+              <div className="border-t border-on-image-border/20">
                 <DropdownMenuTrigger
                   aria-label={`${row.name} actions`}
                   disabled={!onChangePrinting && (!onSetDeckCover || !imageUrl)}
@@ -242,48 +244,47 @@ export function StackCard({
                     strokeWidth={2.5}
                   />
                 </DropdownMenuTrigger>
-                <DropdownMenuContent side="left" align="start" className="w-44">
-                  {imageUrl && onSetDeckCover ? (
-                    <DropdownMenuItem
-                      onClick={() => onSetDeckCover(createDeckTileCover(row, imageUrl, imageName))}
-                    >
-                      Use as deck cover
-                    </DropdownMenuItem>
-                  ) : null}
-                  {onChangePrinting ? (
-                    <DropdownMenuItem onClick={() => onChangePrinting(row)}>
-                      Change printing
-                    </DropdownMenuItem>
-                  ) : null}
-                  {moveTargetCategories.length > 0 ? (
-                    <DropdownMenuSub>
-                      <DropdownMenuSubTrigger
-                        disabled={!canMoveCard}
-                        title={canMoveCard ? "Move to category" : "Card cannot be moved"}
-                      >
-                        Move to
-                      </DropdownMenuSubTrigger>
-                      {/* Like the old submenu: shift up to fit instead of flipping to bottom-aligned. */}
-                      <DropdownMenuSubContent
-                        positionerProps={{ collisionAvoidance: { align: "shift" } }}
-                      >
-                        {moveTargetCategories.map((category) => (
-                          <DropdownMenuItem
-                            key={category.id}
-                            onClick={() => onMoveCardCategory?.(row, category.id)}
-                          >
-                            {category.name}
-                          </DropdownMenuItem>
-                        ))}
-                      </DropdownMenuSubContent>
-                    </DropdownMenuSub>
-                  ) : null}
-                </DropdownMenuContent>
-              </DropdownMenu>
+              </div>
             </div>
-          </div>
+          ) : null}
+        </div>
+        {viewState.showControls ? (
+          <DropdownMenuContent side="left" align="start" className="pointer-events-auto w-44">
+            {imageUrl && onSetDeckCover ? (
+              <DropdownMenuItem
+                onSelect={() => onSetDeckCover(createDeckTileCover(row, imageUrl, imageName))}
+              >
+                Use as deck cover
+              </DropdownMenuItem>
+            ) : null}
+            {onChangePrinting ? (
+              <DropdownMenuItem onSelect={() => onChangePrinting(row)}>
+                Change printing
+              </DropdownMenuItem>
+            ) : null}
+            {moveTargetCategories.length > 0 ? (
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger
+                  disabled={!canMoveCard}
+                  title={canMoveCard ? "Move to category" : "Card cannot be moved"}
+                >
+                  Move to
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent>
+                  {moveTargetCategories.map((category) => (
+                    <DropdownMenuItem
+                      key={category.id}
+                      onSelect={() => onMoveCardCategory?.(row, category.id)}
+                    >
+                      {category.name}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+            ) : null}
+          </DropdownMenuContent>
         ) : null}
-      </div>
+      </DropdownMenu>
     </div>
   );
 }

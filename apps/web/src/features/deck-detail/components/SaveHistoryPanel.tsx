@@ -47,7 +47,7 @@ export function SaveHistoryPanel({
   const [collapseUnnamedSaves, setCollapseUnnamedSaves] = useState(true);
   const [pendingLoadSaveId, setPendingLoadSaveId] = useState<string | null>(null);
   const [selectedSaves, setSelectedSaves] = useState<string[]>([]);
-  const loadTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const loadTriggerRef = useRef<HTMLElement | null>(null);
   const cancelLoadRef = useRef<HTMLButtonElement>(null);
 
   // The inline confirm takes focus on its safe choice when revealed.

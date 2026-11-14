@@ -1,4 +1,3 @@
-import { useRef } from "react";
 import { X } from "lucide-react";
 import { Button } from "@jaiir320/design-system/components/button";
 import {
@@ -38,11 +37,9 @@ export function ExportDeckModal({
   onToggleIncludeQuantity,
   onToggleSeparateSideboard,
 }: ExportDeckModalProps) {
-  const popupRef = useRef<HTMLDivElement>(null);
-
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent ref={popupRef} tabIndex={-1} initialFocus={popupRef} size="2xl" padding="none">
+      <DialogContent tabIndex={-1} initialFocus="content" size="2xl" padding="none">
         <DialogHeader className="border-b border-border px-6 py-5">
           <DialogTitle>Export Deck</DialogTitle>
           <DialogClose

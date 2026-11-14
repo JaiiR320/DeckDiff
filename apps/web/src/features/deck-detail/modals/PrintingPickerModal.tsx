@@ -1,5 +1,5 @@
 import { X } from "lucide-react";
-import { useEffect, useReducer, useRef, useState } from "react";
+import { useEffect, useReducer, useState } from "react";
 import { Alert } from "@jaiir320/design-system/components/alert";
 import { Badge } from "@jaiir320/design-system/components/badge";
 import { Button } from "@jaiir320/design-system/components/button";
@@ -40,7 +40,6 @@ type PrintingsState = {
 export function PrintingPickerModal({ row, onClose, onSelect }: PrintingPickerModalProps) {
   const [filter, setFilter] = useState("");
   const [sort, setSort] = useState<PrintingSort>("date");
-  const popupRef = useRef<HTMLDivElement>(null);
   const [printingsState, setPrintingsState] = useReducer(
     (current: PrintingsState, next: Partial<PrintingsState>) => ({ ...current, ...next }),
     { oracleId: "", printings: [], status: "loading" },
@@ -73,13 +72,12 @@ export function PrintingPickerModal({ row, onClose, onSelect }: PrintingPickerMo
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent
-        ref={popupRef}
         tabIndex={-1}
-        initialFocus={popupRef}
+        initialFocus="content"
         padding="none"
-        className="mx-auto max-w-7xl rounded-none border-0 bg-transparent shadow-none"
+        // Top-aligned with the old viewport's padding (py-5, px-4 / sm:px-6), so it reads as a page.
+        className="mt-5 mb-auto max-h-[calc(100dvh-2.5rem)] w-[calc(100%-2rem)] max-w-7xl rounded-none border-0 bg-transparent shadow-none sm:w-[calc(100%-3rem)]"
         overlayProps={{ className: "bg-on-image/80 backdrop-blur-sm" }}
-        viewportProps={{ className: "block px-4 py-5 sm:px-6" }}
       >
         <DialogHeader className="mb-5">
           <div className="min-w-0 flex-1">

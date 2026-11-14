@@ -33,10 +33,9 @@ import {
 } from "./stackLayoutDrag";
 
 type LaneTriggerProps = ComponentProps<typeof ContextMenuTrigger>;
-type LaneContextMenuEvent = Parameters<NonNullable<LaneTriggerProps["onContextMenu"]>>[0];
+type LaneContextMenuEvent = Parameters<NonNullable<LaneTriggerProps["onContextMenuCapture"]>>[0];
 type LaneKeyboardEvent = Parameters<NonNullable<LaneTriggerProps["onKeyDown"]>>[0];
-type LaneMenuAnchor = { getBoundingClientRect: () => DOMRect };
-type LaneMenuState = { laneIndex: number; anchor: LaneMenuAnchor | null };
+type LaneMenuState = { laneIndex: number; anchor: { x: number; y: number } };
 
 type EditorDeckStackProps = {
   categories: DeckCategory[];
@@ -131,7 +130,8 @@ export function EditorDeckStack({
   const [laneMenu, setLaneMenu] = useState<LaneMenuState | null>(null);
   // Survive the close so focus can return to the lane the menu acted on.
   const laneMenuIndexRef = useRef(0);
-  const skipLaneMenuFocusRef = useRef(false);
+  // Read when the menu closes, so it must change in the same render as the close.
+  const [returnLaneMenuFocus, setReturnLaneMenuFocus] = useState(true);
   const [renamingCategoryId, setRenamingCategoryId] = useState<CardCategory | null>(null);
   const visibleCategoryIds = new Set<CardCategory>();
   const includedCategoryIds = new Set<CardCategory>();
@@ -217,11 +217,13 @@ export function EditorDeckStack({
 
   function showLaneMenu(menu: LaneMenuState) {
     laneMenuIndexRef.current = menu.laneIndex;
-    skipLaneMenuFocusRef.current = false;
+    setReturnLaneMenuFocus(true);
     setLaneMenu(menu);
   }
 
+  // Runs in the capture phase so stopping propagation keeps UI SDK's trigger handler out entirely.
   function openLaneMenu(event: LaneContextMenuEvent) {
+    event.stopPropagation();
     const target = event.target as HTMLElement;
     if (
       readOnly ||
@@ -230,16 +232,14 @@ export function EditorDeckStack({
         "[data-category-stack],button,input,textarea,select,[role=button],[role=combobox]",
       )
     ) {
-      // Leave the native menu alone and keep Base UI from opening the lane menu.
-      event.preventBaseUIHandler();
-      event.stopPropagation();
+      // Leave the native menu alone.
       return;
     }
 
-    // Base UI anchors the menu at the pointer.
+    event.preventDefault();
     showLaneMenu({
       laneIndex: getPointerLaneIndex(laneElements.current, event.clientX),
-      anchor: null,
+      anchor: { x: event.clientX, y: event.clientY },
     });
   }
 
@@ -254,10 +254,7 @@ export function EditorDeckStack({
     const rect = lane.getBoundingClientRect();
     showLaneMenu({
       laneIndex: Number(lane.dataset.laneIndex),
-      anchor: {
-        getBoundingClientRect: () =>
-          DOMRect.fromRect({ x: rect.left + 8, y: rect.top + 8, width: 0, height: 0 }),
-      },
+      anchor: { x: rect.left + 8, y: rect.top + 8 },
     });
   }
 
@@ -271,7 +268,7 @@ export function EditorDeckStack({
     onCreateCategoryInLane?.(laneIndex, category);
     setRenamingCategoryId(category.id);
     // The new category's rename popover takes focus; don't pull it back to the lane.
-    skipLaneMenuFocusRef.current = true;
+    setReturnLaneMenuFocus(false);
     setLaneMenu(null);
   }
 
@@ -365,10 +362,11 @@ export function EditorDeckStack({
           />
           <ContextMenu
             open={laneMenu !== null}
+            // Opening is ours alone (see openLaneMenu); ignoring opens also drops UI SDK's
+            // touch long press, which would compete with the dnd touch sensors.
             onOpenChange={(open) => {
               if (!open) setLaneMenu(null);
             }}
-            disabled={readOnly || generatedView}
           >
             <StackLaneGrid
               data={laneGridData}
@@ -379,10 +377,10 @@ export function EditorDeckStack({
             {generatedView ? null : (
               <LaneMenu
                 laneMenu={laneMenu}
-                getFinalFocus={() =>
-                  skipLaneMenuFocusRef.current
-                    ? false
-                    : (laneElements.current.get(laneMenuIndexRef.current) ?? true)
+                finalFocus={
+                  returnLaneMenuFocus
+                    ? () => laneElements.current.get(laneMenuIndexRef.current)
+                    : "none"
                 }
                 onCreateCategory={createCategoryInLane}
               />
@@ -452,10 +450,9 @@ function StackLaneGrid({
           }
         />
       }
-      onContextMenu={actions.openLaneMenu}
+      disabled={readOnly || generatedView}
+      onContextMenuCapture={actions.openLaneMenu}
       onKeyDown={actions.openLaneMenuFromKeyboard}
-      // Long press would compete with the dnd touch sensors.
-      onTouchStart={(event) => event.preventBaseUIHandler()}
     >
       {visibleLanes.length === 0 ? (
         <Empty variant="outline" className="px-5 py-12 font-semibold text-muted-foreground">
@@ -531,21 +528,16 @@ function StackLaneGrid({
 
 function LaneMenu({
   laneMenu,
-  getFinalFocus,
+  finalFocus,
   onCreateCategory,
 }: {
   laneMenu: LaneMenuState | null;
-  getFinalFocus: () => HTMLElement | boolean;
+  finalFocus: ComponentProps<typeof ContextMenuContent>["finalFocus"];
   onCreateCategory: (laneIndex: number) => void;
 }) {
   return (
-    <ContextMenuContent
-      className="w-44"
-      finalFocus={getFinalFocus}
-      // Keyboard opening anchors at the focused lane; pointer opening uses Base UI's pointer anchor.
-      positionerProps={laneMenu?.anchor ? { anchor: laneMenu.anchor } : undefined}
-    >
-      <ContextMenuItem onClick={() => laneMenu && onCreateCategory(laneMenu.laneIndex)}>
+    <ContextMenuContent className="w-44" finalFocus={finalFocus} anchor={laneMenu?.anchor}>
+      <ContextMenuItem onSelect={() => laneMenu && onCreateCategory(laneMenu.laneIndex)}>
         New category
       </ContextMenuItem>
     </ContextMenuContent>

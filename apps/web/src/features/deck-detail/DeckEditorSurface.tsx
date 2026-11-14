@@ -75,7 +75,9 @@ export function DeckEditorSurface() {
     <Card variant="panel" render={<section />}>
       <Tabs
         value={activeTab}
-        onValueChange={(value: DeckDetailTab) => deckUiActions.onSetActiveTab(value)}
+        onValueChange={(value) => {
+          if (value) deckUiActions.onSetActiveTab(value as DeckDetailTab);
+        }}
       >
         <div className="flex border-b border-border">
           <TabsList aria-label="Deck views">
