@@ -4,7 +4,7 @@ import { useEffect } from "react";
 const EXCLUDED_TARGET =
   "input,textarea,select,[role=textbox],[role=dialog],[role=alertdialog],[role=menu],[role=listbox],[inert]";
 // Open modal dialogs, menus and listboxes block page shortcuts even when focus is elsewhere.
-// Base UI keeps a closed Select list mounted inside a [hidden] wrapper, so hidden layers don't count.
+// Closed popups that stay mounted carry [hidden], so hidden layers don't count.
 const OPEN_BLOCKING_LAYER = [
   "[data-slot=dialog-content]",
   "[data-slot=alert-dialog-content]",

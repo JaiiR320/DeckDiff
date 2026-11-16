@@ -10,13 +10,7 @@ import {
   DialogTrigger,
 } from "@jaiir320/design-system/components/dialog";
 import { Empty, EmptyMedia } from "@jaiir320/design-system/components/empty";
-import {
-  Field,
-  FieldControl,
-  FieldLabel,
-  FieldLegend,
-  FieldSet,
-} from "@jaiir320/design-system/components/field";
+import { Field, FieldLabel, FieldLegend, FieldSet } from "@jaiir320/design-system/components/field";
 import { Input } from "@jaiir320/design-system/components/input";
 import { Textarea } from "@jaiir320/design-system/components/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@jaiir320/design-system/components/toggle-group";
@@ -169,7 +163,7 @@ export function FeedbackButton() {
                   const label = type === "bug" ? "Bug Report" : "Feature Request";
                   const Icon = type === "bug" ? Bug : Lightbulb;
                   return (
-                    <ToggleGroupItem<IssueType>
+                    <ToggleGroupItem
                       key={type}
                       value={type}
                       className="flex-1 not-data-pressed:bg-surface not-data-pressed:text-subtle-foreground not-data-pressed:hover:text-strong-foreground"
@@ -198,13 +192,14 @@ export function FeedbackButton() {
             {/* Description; pb keeps the gap the old inline textarea's line box left below it */}
             <Field className="mt-4 pb-[7px]">
               <FieldLabel>Description</FieldLabel>
-              <FieldControl
+              <Textarea
                 id="feedback-description"
                 required
                 value={body}
                 onValueChange={(value) => setState({ body: value })}
                 placeholder="Describe the issue or feature in detail…"
-                render={<Textarea rows={5} className="resize-y" />}
+                rows={5}
+                className="resize-y"
               />
             </Field>
 

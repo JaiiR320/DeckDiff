@@ -1,4 +1,4 @@
-// ESM stand-in for the CommonJS `use-sync-external-store` shim that Base UI imports
+// ESM stand-in for the CommonJS `use-sync-external-store` shim that dependencies import
 // (aliased in vite.config.ts). In the production server build, the shim's runtime
 // require("react") loads a second React next to the bundled one, so server rendering
 // fails with an invalid hook call (nitrojs/nitro#4171). React 19 ships the hook itself;

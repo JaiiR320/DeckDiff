@@ -50,7 +50,6 @@ export function ImageCropModal({
   const [baseCropsById, setBaseCropsById] = useState<Record<string, ImageCrop>>({});
   const [failedImageIds, setFailedImageIds] = useState<Set<string>>(() => new Set());
   const dragStateRef = useRef<DragState | null>(null);
-  const popupRef = useRef<HTMLDivElement>(null);
   const isReady = images.every((image) => cropsById[image.id]);
 
   function handleImageLoad(image: CropModalImage, event: SyntheticEvent<HTMLImageElement>) {
@@ -119,9 +118,8 @@ export function ImageCropModal({
       }}
     >
       <DialogContent
-        ref={popupRef}
         tabIndex={-1}
-        initialFocus={popupRef}
+        initialFocus="content"
         size="4xl"
         className="max-h-[85vh] overflow-y-auto"
       >

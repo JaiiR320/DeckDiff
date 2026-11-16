@@ -213,7 +213,9 @@ export function DeckActionsModal({
         <DialogTitle>{deck.name}</DialogTitle>
         <Tabs
           value={activeTab}
-          onValueChange={(value: ModalState["activeTab"]) => setState({ activeTab: value })}
+          onValueChange={(value) => {
+            if (value) setState({ activeTab: value as ModalState["activeTab"] });
+          }}
           className="flex min-h-0 flex-1 flex-col"
         >
           <TabsList className="mt-5 border-b border-border">

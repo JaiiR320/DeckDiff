@@ -31,7 +31,7 @@ export function SaveDeckModal({ defaultLabel, isOpen, onClose, onSave }: SaveDec
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent initialFocus={inputRef}>
+      <DialogContent initialFocus={() => inputRef.current}>
         <DialogTitle>Save Deck</DialogTitle>
         <DialogDescription className="mt-2 text-subtle-foreground">
           Create a snapshot of your current deck state.

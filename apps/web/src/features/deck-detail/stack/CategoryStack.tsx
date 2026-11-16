@@ -389,11 +389,7 @@ function CategoryStackMenu({ menu }: { menu: CategoryStackMenuModel }) {
         >
           <MoreHorizontal className="size-3.5" />
         </DropdownMenuTrigger>
-        {/* Like the old menu: shift to fit the viewport instead of flipping, so the move page stays whole. */}
-        <DropdownMenuContent
-          finalFocus={!isRenaming}
-          positionerProps={{ collisionAvoidance: { side: "shift", align: "shift" } }}
-        >
+        <DropdownMenuContent finalFocus={isRenaming ? "none" : undefined}>
           {isMovingCards ? (
             <DropdownMenuGroup className="space-y-2">
               <DropdownMenuLabel>Move cards to</DropdownMenuLabel>
@@ -401,7 +397,7 @@ function CategoryStackMenu({ menu }: { menu: CategoryStackMenuModel }) {
                 targetCategory.id === category ? null : (
                   <DropdownMenuItem
                     key={targetCategory.id}
-                    onClick={() => onMoveCategoryCards?.(category, targetCategory.id)}
+                    onSelect={() => onMoveCategoryCards?.(category, targetCategory.id)}
                   >
                     {targetCategory.name}
                   </DropdownMenuItem>
@@ -409,8 +405,8 @@ function CategoryStackMenu({ menu }: { menu: CategoryStackMenuModel }) {
               )}
               <DropdownMenuItem
                 variant="muted"
-                closeOnClick={false}
-                onClick={() => setMenuState({ isMovingCards: false })}
+                closeOnSelect={false}
+                onSelect={() => setMenuState({ isMovingCards: false })}
               >
                 Back
               </DropdownMenuItem>
@@ -419,20 +415,20 @@ function CategoryStackMenu({ menu }: { menu: CategoryStackMenuModel }) {
             <>
               <DropdownMenuItem
                 disabled={readOnly || cardCount === 0 || !onMoveCategoryCards}
-                closeOnClick={false}
-                onClick={() => setMenuState({ isMovingCards: true })}
+                closeOnSelect={false}
+                onSelect={() => setMenuState({ isMovingCards: true })}
               >
                 Move all cards
               </DropdownMenuItem>
               <DropdownMenuItem
                 disabled={readOnly || !onRenameCategory}
-                onClick={() => setMenuState({ renameDraft: categoryName, isRenaming: true })}
+                onSelect={() => setMenuState({ renameDraft: categoryName, isRenaming: true })}
               >
                 Rename
               </DropdownMenuItem>
               <DropdownMenuItem
                 disabled={readOnly || !onCategoryChange}
-                onClick={() => onCategoryChange?.(category, { hidden: true })}
+                onSelect={() => onCategoryChange?.(category, { hidden: true })}
               >
                 Hide category
               </DropdownMenuItem>
@@ -442,7 +438,7 @@ function CategoryStackMenu({ menu }: { menu: CategoryStackMenuModel }) {
                   disabled={readOnly || removeBlocked || !onRemoveCategory}
                   aria-describedby={removeBlocked ? removeReasonId : undefined}
                   variant="destructive"
-                  onClick={() => onRemoveCategory?.(category)}
+                  onSelect={() => onRemoveCategory?.(category)}
                 >
                   Remove
                 </DropdownMenuItem>
@@ -466,9 +462,9 @@ function CategoryStackMenu({ menu }: { menu: CategoryStackMenuModel }) {
         }}
       >
         <PopoverContent
-          anchor={menuButtonRef}
-          initialFocus={renameInputRef}
-          finalFocus={menuButtonRef}
+          anchor={{ getBoundingClientRect: () => menuButtonRef.current!.getBoundingClientRect() }}
+          initialFocus={() => renameInputRef.current}
+          finalFocus={() => menuButtonRef.current}
           aria-label="Rename category"
         >
           <form
